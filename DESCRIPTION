@@ -1,0 +1,22 @@
+Package: bcinvadeR
+Title: Functions for British Columbia Invasive Species Analyses
+Version: 0.0.0.9000
+Authors@R: 
+    person("Chris", "Madsen", , "Chris.Madsen@bcgov.bc.ca", role = c("aut", "cre"),
+           comment = c(ORCID = "YOUR-ORCID-ID"))
+Description: Pull occurrence data of invasive and non-invasive species in British Columbia and make a simple leaflet map.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.1
+Imports: 
+    bcdata,
+    bcmaps,
+    dplyr,
+    htmltools,
+    leaflet,
+    mapview,
+    purrr,
+    readxl,
+    sf,
+    stringr

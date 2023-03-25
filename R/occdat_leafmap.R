@@ -1,29 +1,65 @@
+#' Title
+#'
+#' @param dat Occurrence data that is either an sf object or has columns labelled Latitude and Longitude.
+#' @param species_column Name of column that lists the Species' name.
+#' @param location_variable Name of column that lists a short description of the occurrence location.
+#' @param popup_or_label Choice of either popups or labels for leaflet map - defaults to labels.
+#' @param choose_baselayer Optional; Select one of 'CartoDB', 'Streets' or 'Terrain.'
+#' @param species_circles_palette Colour palette for occurrence points (e.g. 'Dark2', 'Spectral', etc.) - defaults to 'Dark2'.
+#' @param bg_regions Optional; choose either natural resource polygons, either 'regions' or 'districts'.
+#' @param label_bg_regions Optional; Add names to background regions, either T or F.
+#' @param bg_region_palette Optional; Colour palette of background regions (e.g. 'Dark2', 'Spectral', etc.)
+#' @param set_leaf_view Optional; Set custom view for map - requires concatenated vector of latitude, longitude, and zoom factor.
+#' @param take_snapshot Optional; take snapshot of leaflet map and save to local machine, either T or F.
+#' @param folder_for_snapshot Optional; set folder for snapshot of leaflet map.
+#' @param snapshot_name Optional; Set name for snapshot .PNG file.
+#' @param ... Additional arguments
+#'
+#' @return A leaflet map of BC showing species occurrence points, optionally adding background regions and taking a snapshot .PNG file.
+#' @export
+#'
+#' @examples
+#' # using the toy dataset 'lizards', make a map!
+#'
+#' my_map = occdat_leafmap(dat = lizards, location_variable = 'Location', bg_regions = 'regions')
+#' my_map
+#'
+#' # Take a snapshot of the map and save it to disk.
+#'
+#' map_with_png = occdat_leafmap(dat = goldfish, location_variable = 'Location',
+#' bg_regions = 'districts', bg_region_palette = 'Spectral',
+#' take_snapshot = TRUE, folder_for_snapshot = './map_pngs/',
+#' snapshot_name = 'Goldfish in British Columbia')
+#'
+#' map_with_png
+#'
 occdat_leafmap = function(dat,
                           species_column = 'Species',
                           location_variable = NULL,
                           popup_or_label = 'label',
                           choose_baselayer = NULL,
                           species_circles_palette = 'Dark2',
-                          background_regions = NULL,
-                          label_background_regions = F,
-                          background_region_palette = 'RdBu',
+                          bg_regions = NULL,
+                          label_bg_regions = F,
+                          bg_region_palette = 'RdBu',
                           set_leaf_view = NULL,
                           take_snapshot = FALSE,
                           folder_for_snapshot = NULL,
                           snapshot_name = NULL,
                           ...){
+
   # browser()
   # If the user has chosen to add background regions.
-  if(!is.null(background_regions)){
+  if(!is.null(bg_regions)){
 
-    if(!background_regions %in% c("regions","districts")) stop("Please specify one of 'regions' or 'districts' for background_regions")
+    if(!bg_regions %in% c("regions","districts")) stop("Please specify one of 'regions' or 'districts' for bg_regions")
 
-    if(background_regions == 'regions'){
+    if(bg_regions == 'regions'){
       regs = bcmaps::nr_regions() |>
         dplyr::select(regname = REGION_NAME) |>
         sf::st_transform(crs = 4326)
     }
-    if(background_regions == 'districts'){
+    if(bg_regions == 'districts'){
       regs = bcmaps::nr_districts() |>
         dplyr::select(regname = DISTRICT_NAME) |>
         sf::st_transform(crs = 4326)
@@ -36,12 +72,12 @@ occdat_leafmap = function(dat,
       dplyr::left_join(dat |> sf::st_drop_geometry() |> dplyr::count(regname, name = "number_records"))
 
     number_regs_pal = leaflet::colorNumeric(
-      palette = background_region_palette,
+      palette = bg_region_palette,
       reverse = T,
       domain = regs$number_records
     )
 
-    if(label_background_regions == T){
+    if(label_bg_regions == T){
       reg_label_coords = regs$geometry |>
         purrr::map( ~ {
           sf::st_bbox(.x) |>
@@ -116,7 +152,7 @@ occdat_leafmap = function(dat,
       leaflet::setView(lat = set_leaf_view[1], lng = set_leaf_view[2], zoom = set_leaf_view[3])
   }
 
-  if(!is.null(background_regions)){
+  if(!is.null(bg_regions)){
     l = l |>
       leaflet::addPolygons(
         weight = 1,
@@ -127,7 +163,7 @@ occdat_leafmap = function(dat,
       )
   }
 
-  if(label_background_regions == T){
+  if(label_bg_regions == T){
     # Names of regions in Grey behind.
     l = l |>
       leaflet::addLabelOnlyMarkers(
@@ -192,7 +228,7 @@ occdat_leafmap = function(dat,
               opacity = 1,
               data = dat)
 
-  if(label_background_regions == T){
+  if(label_bg_regions == T){
     l = l |>
       leaflet::addLegend(
         title = 'Number in Region',

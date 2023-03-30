@@ -11,7 +11,7 @@ The goal of bcinvadeR is to facilitate your access to terrestrial or aquatic spe
 You can install the development version of bcinvadeR like so:
 
 ``` r
-remotes::install_github(https://github.com/chrispmad/bcinvadeR)
+remotes::install_github('chrispmad/bcinvadeR')
 ```
 
 ## Example

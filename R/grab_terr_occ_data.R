@@ -6,6 +6,7 @@
 #' @param sheet_name Optional; if you read in your own excel file, what is the excel sheet name?
 #' @param excel_species_var Optional; if you read in your own excel file, what is the name of the column listing common names?
 #' @param output_crs Coordinate Reference System (i.e. projection system); defaults to 4326 (WGS 84), another common option for BC is 3005.
+#' @param quiet Boolean to determine amount of feedback given by function
 #' @param ... Additional arguments
 #'
 #' @return Terrestrial occurrence data in British Columbia; optional to add in one's own excel file from local machine.
@@ -22,8 +23,8 @@
 #'
 grab_terr_occ_data = function(common_names = NULL,
                               scientific_name = NULL,
-                              excel_path = NULL,
-                              sheet_name = NULL,
+                              excel_path = 'J/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
+                              sheet_name = 'Aquatic Reports',
                               excel_species_var = NULL,
                               output_crs = 4326,
                               ...){
@@ -118,8 +119,15 @@ grab_terr_occ_data = function(common_names = NULL,
   # Clean up Species name a bit.
   dataset$Species = stringr::str_squish(stringr::str_to_title(dataset$Species))
 
+  if(quiet == 'false'){
+    cat(paste0(nrow(dataset), " rows prior to dropping duplicates"))
+  }
   # Make sure rows are unique
   dataset = dataset |>
     dplyr::distinct()
+
+  if(quiet == 'false'){
+    cat(paste0(nrow(dataset), " rows after dropping duplicates"))
+  }
   return(dataset)
 }

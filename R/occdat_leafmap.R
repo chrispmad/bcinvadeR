@@ -48,17 +48,18 @@ occdat_leafmap = function(dat,
                           snapshot_name = NULL,
                           ...){
 
-  # browser()
   # If the user has chosen to add background regions.
-  if(!is.null(bg_regions)){
+  if(!is.null(bg_regions) | label_bg_regions == T){
 
     if(!bg_regions %in% c("regions","districts")) stop("Please specify one of 'regions' or 'districts' for bg_regions")
 
+    # If user has chosen regions...
     if(bg_regions == 'regions'){
       regs = bcmaps::nr_regions() |>
         dplyr::select(regname = REGION_NAME) |>
         sf::st_transform(crs = 4326)
     }
+    # If user has chosen districts...
     if(bg_regions == 'districts'){
       regs = bcmaps::nr_districts() |>
         dplyr::select(regname = DISTRICT_NAME) |>
@@ -136,6 +137,7 @@ occdat_leafmap = function(dat,
     }
   }
 
+  # Add a minimap in the top right of the leaflet map.
   l = l |>
     leaflet::addMiniMap(position = 'topright',
                         zoomLevelOffset = -4)
@@ -196,7 +198,9 @@ occdat_leafmap = function(dat,
   }
   if(is.null(location_variable)){
     dat = dat |>
-      dplyr::mutate(popup_label = .data[[species_column]])
+      dplyr::mutate(popup_label = paste0("Date: ",Date,"<br>",
+                                         "Species: ",.data[[species_column]],"<br>",
+                                         "Location: ",ifelse(is.na(Location),'Not specified',Location)))
   }
 
   if(popup_or_label == 'label'){
@@ -206,7 +210,7 @@ occdat_leafmap = function(dat,
         fillColor = species_pal(dat[[species_column]]),
         weight = 0,
         fillOpacity = 1,
-        label = ~popup_label,
+        label = ~lapply(dat$popup_label, htmltools::HTML),
         data = dat
       )
   }

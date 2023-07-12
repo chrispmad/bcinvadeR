@@ -19,10 +19,11 @@
 #' invasive_fish = grab_aq_occ_data(common_names = c("black crappie","bullhead",
 #' "black bullhead","brown bullhead","yellow bullhead"))
 grab_aq_occ_data = function(common_names = NULL,
-                            excel_path = 'J/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
+                            excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
                             excel_species_var = NULL,
                             output_crs = 4326,
+                            quiet = T,
                             ...){
 
   # Must specify common name or scientific name, as character string
@@ -114,14 +115,14 @@ grab_aq_occ_data = function(common_names = NULL,
   # Clean up Species name a bit.
   dataset$Species = stringr::str_squish(stringr::str_to_title(dataset$Species))
 
-  if(quiet == 'false'){
+  if(quiet == FALSE){
     cat(paste0(nrow(dataset), " rows prior to dropping duplicates"))
   }
   # Make sure rows are unique
   dataset = dataset |>
     dplyr::distinct()
 
-  if(quiet == 'false'){
+  if(quiet == FALSE){
     cat(paste0(nrow(dataset), " rows after dropping duplicates"))
   }
 

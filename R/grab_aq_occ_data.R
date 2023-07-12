@@ -116,7 +116,7 @@ grab_aq_occ_data = function(common_names = NULL,
   dataset$Species = stringr::str_squish(stringr::str_to_title(dataset$Species))
 
   if(quiet == FALSE){
-    cat(paste0(nrow(dataset), " rows prior to dropping duplicates"))
+    cat(paste0(nrow(dataset), " rows prior to dropping duplicates\n"))
   }
   # Make sure rows are unique
   dataset = dataset |>

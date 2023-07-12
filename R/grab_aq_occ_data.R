@@ -43,7 +43,7 @@ grab_aq_occ_data = function(common_names = NULL,
   ## BCG Warehouse Data
   bcg_records = tryCatch(
     expr = bcdata::bcdc_query_geodata('aca81811-4b08-4382-9af7-204e0b9d2448') |>
-      dplyr::filter(SPECIES_NAME %in% common_names) |>
+      dplyr::filter(SPECIES_NAME %in% all_of(common_names)) |>
       bcdata::collect() |>
       sf::st_transform(crs = output_crs) |>
       dplyr::select(Date = OBSERVATION_DATE, Species = SPECIES_NAME, Location = GAZETTED_NAME) |>
@@ -54,7 +54,7 @@ grab_aq_occ_data = function(common_names = NULL,
   )
 
   if(!is.null(bcg_records)){
-    cat(paste0("Found ",length(bcg_records),"...\n"))
+    cat(paste0("Found ",nrow(bcg_records),"...\n"))
   } else {
     cat("No records here!\n")
   }
@@ -78,7 +78,7 @@ grab_aq_occ_data = function(common_names = NULL,
   )
 
   if(!is.null(old_ais)){
-    cat(paste0("Found ",length(old_ais),"...\n"))
+    cat(paste0("Found ",nrow(old_ais),"...\n"))
   } else {
     cat("No records here!\n")
   }
@@ -159,7 +159,7 @@ grab_aq_occ_data = function(common_names = NULL,
     cat(paste0(nrow(dataset), " rows after dropping duplicates\n"))
   }
 
-  return(dataset)
-
   beepr::beep(4)
+
+  return(dataset)
 }

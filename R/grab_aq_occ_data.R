@@ -21,11 +21,10 @@
 grab_aq_occ_data = function(common_names = NULL,
                             excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
-                            excel_species_var = NULL,
+                            excel_species_var = 'Species',
                             output_crs = 4326,
-                            quiet = T,
+                            quiet = F,
                             ...){
-
   # Must specify common name or scientific name, as character string
   if(is.null(common_names)) stop("Enter the species' common name")
   if(!is.character(common_names)) stop("Species name must be a character string")
@@ -38,6 +37,8 @@ grab_aq_occ_data = function(common_names = NULL,
                    paste0(common_names,' '))
 
   search_results = list()
+
+  cat("Looking for records in the Wildlife Species Inventory Incidental Observations layer on BC Warehouse...\n")
 
   ## BCG Warehouse Data
   bcg_records = tryCatch(
@@ -52,7 +53,15 @@ grab_aq_occ_data = function(common_names = NULL,
     error = function(e) NULL
   )
 
+  if(!is.null(bcg_records)){
+    cat(paste0("Found ",length(bcg_records),"...\n"))
+  } else {
+    cat("No records here!\n")
+  }
+
   search_results = append(search_results, list(bcg_records))
+
+  cat("Looking for records in the Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
 
   # Look in the old AIS layer
   old_ais = tryCatch(
@@ -67,9 +76,19 @@ grab_aq_occ_data = function(common_names = NULL,
       dplyr::select(DataSource, dplyr::everything()),
     error = function(e) NULL
   )
+
+  if(!is.null(old_ais)){
+    cat(paste0("Found ",length(old_ais),"...\n"))
+  } else {
+    cat("No records here!\n")
+  }
+
   search_results = append(search_results, list(old_ais))
 
   if(!is.null(excel_path) & !is.null(sheet_name) & !is.null(excel_species_var)){
+
+    cat("Looking for records in the Master Incidence Report Records excel file...\n")
+
     inc = tryCatch(
       expr = {
         excel_dat = readxl::read_excel(path = excel_path,
@@ -78,6 +97,7 @@ grab_aq_occ_data = function(common_names = NULL,
 
         initial_nrow_inc = nrow(excel_dat)
 
+        # Filter out rows with no lat/long
         excel_dat = excel_dat |>
           dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
           dplyr::mutate(Date = as.character(Date)) |>
@@ -85,7 +105,13 @@ grab_aq_occ_data = function(common_names = NULL,
           dplyr::select(Species,Scientific,Date,Location,Latitude,Longitude) |>
           dplyr::mutate(DataSource = 'Incidental Observation') |>
           dplyr::select(DataSource, dplyr::everything()) |>
-          dplyr::filter(!is.na(Latitude),!is.na(Longitude)) |>
+          dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+
+        if(nrow(test2) == 0 & initial_nrow_inc > 0){
+          stop("The excel records were filtered out due to lacking latitude and longitude coordinates!")
+        }
+
+        excel_dat = excel_dat |>
           sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
           sf::st_transform(crs = output_crs)
 
@@ -103,6 +129,13 @@ grab_aq_occ_data = function(common_names = NULL,
       },
       error = function(e) NULL
     )
+
+    if(!is.null(inc)){
+      cat(paste0("Found ",length(inc),"...\n"))
+    } else {
+      cat("No records here!\n")
+    }
+
     search_results = append(search_results, list(inc))
   }
 
@@ -123,8 +156,10 @@ grab_aq_occ_data = function(common_names = NULL,
     dplyr::distinct()
 
   if(quiet == FALSE){
-    cat(paste0(nrow(dataset), " rows after dropping duplicates"))
+    cat(paste0(nrow(dataset), " rows after dropping duplicates\n"))
   }
 
   return(dataset)
+
+  beepr::beep(4)
 }

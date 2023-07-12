@@ -10,9 +10,9 @@ grab_terr_occ_data(
   excel_path =
     "J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx",
   sheet_name = "Aquatic Reports",
-  excel_species_var = NULL,
+  excel_species_var = "Species",
   output_crs = 4326,
-  quiet = T,
+  quiet = F,
   ...
 )
 }

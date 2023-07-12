@@ -7,10 +7,11 @@
 grab_aq_occ_data(
   common_names = NULL,
   excel_path =
-    "J/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx",
+    "J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx",
   sheet_name = "Aquatic Reports",
   excel_species_var = NULL,
   output_crs = 4326,
+  quiet = T,
   ...
 )
 }
@@ -25,9 +26,9 @@ grab_aq_occ_data(
 
 \item{output_crs}{Coordinate Reference System (i.e. projection system); defaults to 4326 (WGS 84), another common option for BC is 3005.}
 
-\item{...}{Additional arguments}
-
 \item{quiet}{Boolean to determine amount of feedback given by function}
+
+\item{...}{Additional arguments}
 }
 \value{
 Aquatic occurrence data in British Columbia; optional to add in one's own excel file from local machine.

@@ -5,7 +5,7 @@
 \title{Grab Terrestrial BC Occurrence Data}
 \usage{
 grab_terr_occ_data(
-  common_name = NULL,
+  common_names = NULL,
   scientific_name = NULL,
   excel_path =
     "J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx",
@@ -17,7 +17,7 @@ grab_terr_occ_data(
 )
 }
 \arguments{
-\item{common_name}{A vector of common names for one or more species of interest.}
+\item{common_names}{A vector of common names for one or more species of interest.}
 
 \item{scientific_name}{A vector of scientific names for one or more species of interest.}
 

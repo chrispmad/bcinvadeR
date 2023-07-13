@@ -1,6 +1,6 @@
 #' Grab Terrestrial BC Occurrence Data
 #'
-#' @param common_name A vector of common names for one or more species of interest.
+#' @param common_names A vector of common names for one or more species of interest.
 #' @param scientific_name A vector of scientific names for one or more species of interest.
 #' @param excel_path Optional; path to your excel file (must include columns Date, Species, Scientific, Location, Latitude and Longitude)
 #' @param sheet_name Optional; if you read in your own excel file, what is the excel sheet name?
@@ -21,7 +21,7 @@
 #' invasives = grab_terr_occ_data(common_names = c("common wall lizard"),
 #' scientific_name = c('Sciurus carolinensis'))
 #'
-grab_terr_occ_data = function(common_name = NULL,
+grab_terr_occ_data = function(common_names = NULL,
                               scientific_name = NULL,
                               excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
                               sheet_name = 'Aquatic Reports',
@@ -35,11 +35,11 @@ grab_terr_occ_data = function(common_name = NULL,
 
 
   # expand common names to all kinds of CaPiTaLiZaTiOn.
-  common_names = c(stringr::str_to_lower(common_name),
-                   stringr::str_to_sentence(common_name),
-                   stringr::str_to_title(common_name),
-                   stringr::str_to_upper(common_name),
-                   paste0(common_name,' '))
+  common_names = c(stringr::str_to_lower(common_names),
+                   stringr::str_to_sentence(common_names),
+                   stringr::str_to_title(common_names),
+                   stringr::str_to_upper(common_names),
+                   paste0(common_names,' '))
 
   search_results = list()
 
@@ -117,7 +117,7 @@ grab_terr_occ_data = function(common_name = NULL,
         if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
           print("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!")
           if(is.null(bcg_records_scientific) & is.null(bcg_records)){
-            stop(paste0("No records found for ",common_name))
+            stop(paste0("No records found for ",common_name[3]))
           }
         }
 

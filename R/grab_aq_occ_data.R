@@ -1,6 +1,6 @@
 #' Grab Aquatic BC Occurrence Data
 #'
-#' @param common_name A vector of common names for one or more species of interest.
+#' @param common_names A vector of common names for one or more species of interest.
 #' @param excel_path Optional; path to your excel file (must include columns Date, Species, Scientific, Location, Latitude and Longitude)
 #' @param sheet_name Optional; if you read in your own excel file, what is the excel sheet name?
 #' @param excel_species_var Optional; if you read in your own excel file, what is the name of the column listing common names?
@@ -18,7 +18,7 @@
 #' # Search for multiple species in one go!
 #' invasive_fish = grab_aq_occ_data(common_names = c("black crappie","bullhead",
 #' "black bullhead","brown bullhead","yellow bullhead"))
-grab_aq_occ_data = function(common_name = NULL,
+grab_aq_occ_data = function(common_names = NULL,
                             excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
                             excel_species_var = 'Species',
@@ -30,11 +30,11 @@ grab_aq_occ_data = function(common_name = NULL,
   if(!is.character(common_names)) stop("Species name must be a character string")
 
   # expand common names to all kinds of CaPiTaLiZaTiOn.
-  common_names = c(stringr::str_to_lower(common_name),
-                   stringr::str_to_sentence(common_name),
-                   stringr::str_to_title(common_name),
-                   stringr::str_to_upper(common_name),
-                   paste0(common_name,' '))
+  common_names = c(stringr::str_to_lower(common_names),
+                   stringr::str_to_sentence(common_names),
+                   stringr::str_to_title(common_names),
+                   stringr::str_to_upper(common_names),
+                   paste0(common_names,' '))
 
   search_results = list()
 
@@ -110,7 +110,7 @@ grab_aq_occ_data = function(common_name = NULL,
         if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
           print("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!")
           if(is.null(old_ais) & is.null(bcg_records)){
-            stop(paste0("No records found for ",common_name))
+            stop(paste0("No records found for ",common_names[3]))
           }
         }
 

@@ -5,7 +5,7 @@
 \title{Grab Aquatic BC Occurrence Data}
 \usage{
 grab_aq_occ_data(
-  common_name = NULL,
+  common_names = NULL,
   excel_path =
     "J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx",
   sheet_name = "Aquatic Reports",
@@ -16,7 +16,7 @@ grab_aq_occ_data(
 )
 }
 \arguments{
-\item{common_name}{A vector of common names for one or more species of interest.}
+\item{common_names}{A vector of common names for one or more species of interest.}
 
 \item{excel_path}{Optional; path to your excel file (must include columns Date, Species, Scientific, Location, Latitude and Longitude)}
 

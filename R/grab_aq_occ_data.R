@@ -18,7 +18,7 @@
 #' # Search for multiple species in one go!
 #' invasive_fish = grab_aq_occ_data(common_names = c("black crappie","bullhead",
 #' "black bullhead","brown bullhead","yellow bullhead"))
-grab_aq_occ_data = function(common_names = NULL,
+grab_aq_occ_data = function(common_name = NULL,
                             excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
                             excel_species_var = 'Species',
@@ -30,11 +30,11 @@ grab_aq_occ_data = function(common_names = NULL,
   if(!is.character(common_names)) stop("Species name must be a character string")
 
   # expand common names to all kinds of CaPiTaLiZaTiOn.
-  common_names = c(stringr::str_to_lower(common_names),
-                   stringr::str_to_sentence(common_names),
-                   stringr::str_to_title(common_names),
-                   stringr::str_to_upper(common_names),
-                   paste0(common_names,' '))
+  common_names = c(stringr::str_to_lower(common_name),
+                   stringr::str_to_sentence(common_name),
+                   stringr::str_to_title(common_name),
+                   stringr::str_to_upper(common_name),
+                   paste0(common_name,' '))
 
   search_results = list()
 
@@ -66,7 +66,7 @@ grab_aq_occ_data = function(common_names = NULL,
   # Look in the old AIS layer
   old_ais = tryCatch(
     expr = bcdata::bcdc_query_geodata('aquatic-invasive-species-of-british-columbia') |>
-      dplyr::filter(ENGLISH_NAME %in% dplyr::any_of(common_names)) |>
+      dplyr::filter(ENGLISH_NAME %in% common_names) |>
       bcdata::collect() |>
       sf::st_transform(crs = output_crs) |>
       dplyr::mutate(Species = stringr::str_to_title(ENGLISH_NAME)) |>
@@ -89,11 +89,11 @@ grab_aq_occ_data = function(common_names = NULL,
 
     cat("Looking for records in the Master Incidence Report Records excel file...\n")
 
-    inc = tryCatch(
-      expr = {
+    #inc = tryCatch(
+    #  expr = {
         excel_dat = readxl::read_excel(path = excel_path,
                                        sheet = sheet_name) |>
-          dplyr::filter(Species %in% dplyr::any_of(common_names))
+          dplyr::filter(Species %in% common_names)
 
         initial_nrow_inc = nrow(excel_dat)
 
@@ -107,8 +107,11 @@ grab_aq_occ_data = function(common_names = NULL,
           dplyr::select(DataSource, dplyr::everything()) |>
           dplyr::filter(!is.na(Latitude),!is.na(Longitude))
 
-        if(nrow(test2) == 0 & initial_nrow_inc > 0){
-          stop("The excel records were filtered out due to lacking latitude and longitude coordinates!")
+        if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
+          print("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!")
+          if(is.null(old_ais) & is.null(bcg_records)){
+            stop(paste0("No records found for ",common_name))
+          }
         }
 
         excel_dat = excel_dat |>
@@ -125,10 +128,10 @@ grab_aq_occ_data = function(common_names = NULL,
                          " rows dropped from Master incidental sheet due to non-numeric lat/long data"))
         }
 
-        excel_dat
-      },
-      error = function(e) NULL
-    )
+       inc = excel_dat
+    # },
+    #  error = function(e) NULL
+    #)
 
     if(!is.null(inc)){
       cat(paste0("Found ",length(inc),"...\n"))

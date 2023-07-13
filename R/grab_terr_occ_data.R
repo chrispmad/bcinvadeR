@@ -21,7 +21,7 @@
 #' invasives = grab_terr_occ_data(common_names = c("common wall lizard"),
 #' scientific_name = c('Sciurus carolinensis'))
 #'
-grab_terr_occ_data = function(common_names = NULL,
+grab_terr_occ_data = function(common_name = NULL,
                               scientific_name = NULL,
                               excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
                               sheet_name = 'Aquatic Reports',
@@ -35,11 +35,11 @@ grab_terr_occ_data = function(common_names = NULL,
 
 
   # expand common names to all kinds of CaPiTaLiZaTiOn.
-  common_names = c(stringr::str_to_lower(common_names),
-                   stringr::str_to_sentence(common_names),
-                   stringr::str_to_title(common_names),
-                   stringr::str_to_upper(common_names),
-                   paste0(common_names,' '))
+  common_names = c(stringr::str_to_lower(common_name),
+                   stringr::str_to_sentence(common_name),
+                   stringr::str_to_title(common_name),
+                   stringr::str_to_upper(common_name),
+                   paste0(common_name,' '))
 
   search_results = list()
 
@@ -97,11 +97,11 @@ grab_terr_occ_data = function(common_names = NULL,
 
     cat("Looking for records in the Master Incidence Report Records excel file...\n")
 
-    inc = tryCatch(
-      expr = {
+    #inc = tryCatch(
+    #  expr = {
         excel_dat = readxl::read_excel(path = excel_path,
                                        sheet = sheet_name) |>
-          dplyr::filter(!!rlang::sym(excel_species_var) %in% dplyr::all_of(common_names))
+          dplyr::filter(!!rlang::sym(excel_species_var) %in% common_names)
 
         initial_nrow_inc = nrow(excel_dat)
 
@@ -112,7 +112,16 @@ grab_terr_occ_data = function(common_names = NULL,
           dplyr::select(Species,Scientific,Date,Location,Latitude,Longitude) |>
           dplyr::mutate(DataSource = 'Incidental Observation') |>
           dplyr::select(DataSource, dplyr::everything()) |>
-          dplyr::filter(!is.na(Latitude),!is.na(Longitude)) |>
+          dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+
+        if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
+          print("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!")
+          if(is.null(bcg_records_scientific) & is.null(bcg_records)){
+            stop(paste0("No records found for ",common_name))
+          }
+        }
+
+        excel_dat = excel_dat |>
           sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
           sf::st_transform(crs = output_crs)
 
@@ -124,10 +133,10 @@ grab_terr_occ_data = function(common_names = NULL,
                          " rows dropped from Master incidental sheet due to non-numeric lat/long data"))
         }
 
-        excel_dat
-      },
-      error = function(e) NULL
-    )
+       inc = excel_dat
+    #  },
+    #  error = function(e) NULL
+    #)
 
     if(!is.null(search_results)){
       cat(paste0("Found ",length(search_results),"...\n"))

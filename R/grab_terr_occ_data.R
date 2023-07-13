@@ -48,7 +48,7 @@ grab_terr_occ_data = function(common_names = NULL,
   ## BCG Warehouse Data
   bcg_records = tryCatch(
     expr = bcdata::bcdc_query_geodata('https://catalogue.data.gov.bc.ca/dataset/7d5a14c4-3b6e-4c15-980b-68ee68796dbe') |>
-      dplyr::filter(SPECIES_ENGLISH_NAME %in% all_of(common_names)) |>
+      dplyr::filter(SPECIES_ENGLISH_NAME %in% common_names) |>
       bcdata::collect() |>
       sf::st_transform(crs = output_crs) |>
       dplyr::select(Date = OBSERVATION_DATE, Species = SPECIES_ENGLISH_NAME,

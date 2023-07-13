@@ -43,7 +43,7 @@ grab_aq_occ_data = function(common_names = NULL,
   ## BCG Warehouse Data
   bcg_records = tryCatch(
     expr = bcdata::bcdc_query_geodata('aca81811-4b08-4382-9af7-204e0b9d2448') |>
-      dplyr::filter(SPECIES_NAME %in% all_of(common_names)) |>
+      dplyr::filter(SPECIES_NAME %in% common_names) |>
       bcdata::collect() |>
       sf::st_transform(crs = output_crs) |>
       dplyr::select(Date = OBSERVATION_DATE, Species = SPECIES_NAME, Location = GAZETTED_NAME) |>
@@ -66,7 +66,7 @@ grab_aq_occ_data = function(common_names = NULL,
   # Look in the old AIS layer
   old_ais = tryCatch(
     expr = bcdata::bcdc_query_geodata('aquatic-invasive-species-of-british-columbia') |>
-      dplyr::filter(ENGLISH_NAME %in% dplyr::all_of(common_names)) |>
+      dplyr::filter(ENGLISH_NAME %in% dplyr::any_of(common_names)) |>
       bcdata::collect() |>
       sf::st_transform(crs = output_crs) |>
       dplyr::mutate(Species = stringr::str_to_title(ENGLISH_NAME)) |>
@@ -93,7 +93,7 @@ grab_aq_occ_data = function(common_names = NULL,
       expr = {
         excel_dat = readxl::read_excel(path = excel_path,
                                        sheet = sheet_name) |>
-          dplyr::filter(Species %in% dplyr::all_of(common_names))
+          dplyr::filter(Species %in% dplyr::any_of(common_names))
 
         initial_nrow_inc = nrow(excel_dat)
 

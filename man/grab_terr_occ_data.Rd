@@ -17,6 +17,8 @@ grab_terr_occ_data(
 )
 }
 \arguments{
+\item{common_name}{A vector of common names for one or more species of interest.}
+
 \item{scientific_name}{A vector of scientific names for one or more species of interest.}
 
 \item{excel_path}{Optional; path to your excel file (must include columns Date, Species, Scientific, Location, Latitude and Longitude)}
@@ -30,8 +32,6 @@ grab_terr_occ_data(
 \item{quiet}{Boolean to determine amount of feedback given by function}
 
 \item{...}{Additional arguments}
-
-\item{common_names}{A vector of common names for one or more species of interest.}
 }
 \value{
 Terrestrial occurrence data in British Columbia; optional to add in one's own excel file from local machine.

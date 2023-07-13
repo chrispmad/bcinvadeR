@@ -1,6 +1,6 @@
 #' Grab Terrestrial BC Occurrence Data
 #'
-#' @param common_names A vector of common names for one or more species of interest.
+#' @param common_name A vector of common names for one or more species of interest.
 #' @param scientific_name A vector of scientific names for one or more species of interest.
 #' @param excel_path Optional; path to your excel file (must include columns Date, Species, Scientific, Location, Latitude and Longitude)
 #' @param sheet_name Optional; if you read in your own excel file, what is the excel sheet name?

@@ -6,7 +6,7 @@
 \usage{
 occdat_leafmap(
   dat,
-  species_column = "Common_Name",
+  species_column = "Species",
   location_variable = NULL,
   popup_or_label = "label",
   choose_baselayer = NULL,

@@ -92,7 +92,7 @@ occdat_leafmap = function(dat,
 
       region_labels = regs |>
         sf::st_centroid() |>
-        dplyr::mutate(regname = stringr::str_remove(regname, " Natural Resource [Region,District]")) |>
+        dplyr::mutate(regname = stringr::str_remove(regname, " Natural Resource (Region|District)")) |>
         dplyr::mutate(regname = stringr::str_replace_all(regname,"[ ,-]","<br>"))
     }
   }
@@ -179,7 +179,7 @@ occdat_leafmap = function(dat,
         data = region_labels
       ) |>
       leaflet::addLabelOnlyMarkers(
-        label = ~paste0(number_records),
+        label = ~lapply(paste0(regname, ": ",number_records), htmltools::HTML),
         labelOptions = leaflet::labelOptions(noHide = T,
                                     offset = c(40,50),
                                     direction = 'right'),

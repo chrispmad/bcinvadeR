@@ -139,7 +139,7 @@ grab_terr_occ_data = function(common_names = NULL,
     #)
 
     if(!is.null(search_results)){
-      cat(paste0("Found ",length(search_results),"...\n"))
+      cat(paste0("Found ",nrow(inc),"...\n"))
     } else {
       cat("No records here!\n")
     }

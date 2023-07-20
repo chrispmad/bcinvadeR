@@ -38,7 +38,9 @@ grab_aq_occ_data = function(common_names = NULL,
 
   search_results = list()
 
-  cat("Looking for records in the Wildlife Species Inventory Incidental Observations layer on BC Warehouse...\n")
+  if(quiet == F){
+    cat("Looking for records in the Wildlife Species Inventory Incidental Observations layer on BC Warehouse...\n")
+  }
 
   ## BCG Warehouse Data
   bcg_records = tryCatch(
@@ -53,19 +55,24 @@ grab_aq_occ_data = function(common_names = NULL,
     error = function(e) NULL
   )
 
-  if(!is.null(bcg_records)){
-    cat(paste0("Found ",nrow(bcg_records),"...\n"))
-  } else {
-    cat("No records here!\n")
+  if(quiet == F){
+    if(!is.null(bcg_records)){
+      cat(paste0(nrow(bcg_records)," records...\n"))
+    } else {
+      cat("No records here!\n")
+    }
   }
 
   search_results = append(search_results, list(bcg_records))
 
-  cat("Looking for records in the Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
+  if(quiet == F){
+    cat("Looking for records in the Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
+  }
 
   # Look in the old AIS layer
   old_ais = tryCatch(
-    expr = bcdata::bcdc_query_geodata('aquatic-invasive-species-of-british-columbia') |>
+    expr = suppressMessages(
+      bcdata::bcdc_query_geodata('d9613096-b2fe-43b4-9be1-d82a3b805082') |>
       dplyr::filter(ENGLISH_NAME %in% common_names) |>
       bcdata::collect() |>
       sf::st_transform(crs = output_crs) |>
@@ -73,70 +80,84 @@ grab_aq_occ_data = function(common_names = NULL,
       dplyr::mutate(Location = ifelse(is.na(BCGNIS_NAME),LOCATION_INFORMATION,stringr::str_to_title(BCGNIS_NAME))) |>
       dplyr::select(Species, Date = COLLECTION_DATE, Location) |>
       dplyr::mutate(DataSource = 'Old BCG AIS layer') |>
-      dplyr::select(DataSource, dplyr::everything()),
+      dplyr::select(DataSource, dplyr::everything())
+      ),
     error = function(e) NULL
   )
 
-  if(!is.null(old_ais)){
-    cat(paste0("Found ",nrow(old_ais),"...\n"))
-  } else {
-    cat("No records here!\n")
+  if(quiet == F){
+    if(!is.null(old_ais)){
+      cat(paste0(nrow(old_ais)," records...\n"))
+    } else {
+      cat("No records here!\n")
+    }
   }
 
   search_results = append(search_results, list(old_ais))
 
   if(!is.null(excel_path) & !is.null(sheet_name) & !is.null(excel_species_var)){
 
-    cat("Looking for records in the Master Incidence Report Records excel file...\n")
+    if(quiet == F){
+      cat("Looking for records in the Master Incidence Report Records excel file...\n")
+    }
 
     #inc = tryCatch(
     #  expr = {
-        excel_dat = readxl::read_excel(path = excel_path,
-                                       sheet = sheet_name) |>
-          dplyr::filter(!!rlang::sym(excel_species_var) %in% common_names)
+    excel_dat = readxl::read_excel(path = excel_path,
+                                   sheet = sheet_name) |>
+      dplyr::rename(Species = excel_species_var) |>
+      dplyr::filter(Species %in% common_names) |>
+      dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude)
 
-        initial_nrow_inc = nrow(excel_dat)
+    initial_nrow_inc = nrow(excel_dat)
 
-        # Filter out rows with no lat/long
-        excel_dat = excel_dat |>
-          dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
-          dplyr::mutate(Date = as.character(Date)) |>
-          dplyr::rename(Species = excel_species_var) |>
-          dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude) |>
-          dplyr::mutate(DataSource = 'Incidental Observation') |>
-          dplyr::select(DataSource, dplyr::everything()) |>
-          dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+    # Filter out rows with no lat/long
+    excel_dat = suppressWarnings(
+      excel_dat |>
+        dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
+        dplyr::mutate(Date = as.character(Date)) |>
+        dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude) |>
+        dplyr::mutate(DataSource = 'Incidental Observation') |>
+        dplyr::select(DataSource, dplyr::everything()) |>
+        dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+    )
 
-        if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
-          print("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!")
-          if(is.null(old_ais) & is.null(bcg_records)){
-            stop(paste0("No records found for ",common_names[3]))
-          }
+    if(quiet == F){
+      if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
+        cat("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!\n")
+        if(is.null(old_ais) & is.null(bcg_records)){
+          stop(paste0("No records found for ",common_names[3]))
         }
+      }
+    }
 
-        excel_dat = excel_dat |>
-          sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
-          sf::st_transform(crs = output_crs)
+    excel_dat = excel_dat |>
+      sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
+      sf::st_transform(crs = output_crs)
 
-        post_latlon_filter_nrow_inc = nrow(excel_dat)
+    post_latlon_filter_nrow_inc = nrow(excel_dat)
 
-        # If we lost any rows in the master incidental occurrence sheet because of crummy lat/long data,
-        # notify.
-        if(initial_nrow_inc != post_latlon_filter_nrow_inc){
-          warning(paste0("Note: ",
-                         initial_nrow_inc-post_latlon_filter_nrow_inc,
-                         " rows dropped from Master incidental sheet due to non-numeric lat/long data"))
-        }
+    # If we lost any rows in the master incidental occurrence sheet because of crummy lat/long data,
+    # notify.
+    if(quiet == F){
+      if(initial_nrow_inc != post_latlon_filter_nrow_inc){
+        cat(paste0("Note: ",
+                     initial_nrow_inc-post_latlon_filter_nrow_inc,
+                     " row(s) dropped from Master incidental sheet due to non-numeric coordinate data\n"))
+      }
+    }
 
-       inc = excel_dat
+    inc = excel_dat
     # },
     #  error = function(e) NULL
     #)
 
-    if(!is.null(inc)){
-      cat(paste0("Found ",length(inc),"...\n"))
-    } else {
-      cat("No records here!\n")
+    if(quiet == F){
+      if(!is.null(inc)){
+        cat(paste0(nrow(inc)," records...\n"))
+      } else {
+        cat("No records here!\n")
+      }
     }
 
     search_results = append(search_results, list(inc))

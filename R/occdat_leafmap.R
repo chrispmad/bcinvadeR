@@ -34,7 +34,7 @@
 #' map_with_png
 #'
 occdat_leafmap = function(dat,
-                          species_column = 'Species',
+                          species_column = 'Common_Name',
                           location_variable = NULL,
                           popup_or_label = 'label',
                           choose_baselayer = NULL,

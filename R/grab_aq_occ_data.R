@@ -21,7 +21,7 @@
 grab_aq_occ_data = function(common_names = NULL,
                             excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
-                            excel_species_var = 'Species',
+                            excel_species_var = 'Common_Name',
                             output_crs = 4326,
                             quiet = F,
                             ...){
@@ -102,7 +102,7 @@ grab_aq_occ_data = function(common_names = NULL,
           dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
           dplyr::mutate(Date = as.character(Date)) |>
           dplyr::rename(Species = excel_species_var) |>
-          dplyr::select(Species,Scientific,Date,Location,Latitude,Longitude) |>
+          dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude) |>
           dplyr::mutate(DataSource = 'Incidental Observation') |>
           dplyr::select(DataSource, dplyr::everything()) |>
           dplyr::filter(!is.na(Latitude),!is.na(Longitude))
@@ -162,7 +162,7 @@ grab_aq_occ_data = function(common_names = NULL,
     cat(paste0(nrow(dataset), " rows after dropping duplicates\n"))
   }
 
-  beepr::beep(4)
+  beepr::beep(5)
 
   return(dataset)
 }

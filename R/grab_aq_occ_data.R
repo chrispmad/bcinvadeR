@@ -71,7 +71,7 @@ grab_aq_occ_data = function(common_names = NULL,
 
   # Look in the old AIS layer
   old_ais = tryCatch(
-    expr = suppressMessages(
+    expr = suppressWarnings(
       bcdata::bcdc_query_geodata('d9613096-b2fe-43b4-9be1-d82a3b805082') |>
       dplyr::filter(ENGLISH_NAME %in% common_names) |>
       bcdata::collect() |>
@@ -101,56 +101,56 @@ grab_aq_occ_data = function(common_names = NULL,
       cat("Looking for records in the Master Incidence Report Records excel file...\n")
     }
 
-    #inc = tryCatch(
-    #  expr = {
-    excel_dat = readxl::read_excel(path = excel_path,
-                                   sheet = sheet_name) |>
-      dplyr::rename(Species = excel_species_var) |>
-      dplyr::filter(Species %in% common_names) |>
-      dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude)
+    inc = tryCatch(
+      expr = {
+        excel_dat = readxl::read_excel(path = excel_path,
+                                       sheet = sheet_name) |>
+          dplyr::rename(Species = excel_species_var) |>
+          dplyr::filter(Species %in% common_names) |>
+          dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude)
 
-    initial_nrow_inc = nrow(excel_dat)
+        initial_nrow_inc = nrow(excel_dat)
 
-    # Filter out rows with no lat/long
-    excel_dat = suppressWarnings(
-      excel_dat |>
-        dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
-        dplyr::mutate(Date = as.character(Date)) |>
-        dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude) |>
-        dplyr::mutate(DataSource = 'Incidental Observation') |>
-        dplyr::select(DataSource, dplyr::everything()) |>
-        dplyr::filter(!is.na(Latitude),!is.na(Longitude))
-    )
+        # Filter out rows with no lat/long
+        excel_dat = suppressWarnings(
+          excel_dat |>
+            dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
+            dplyr::mutate(Date = as.character(Date)) |>
+            dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude) |>
+            dplyr::mutate(DataSource = 'Incidental Observation') |>
+            dplyr::select(DataSource, dplyr::everything()) |>
+            dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+        )
 
-    if(quiet == F){
-      if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
-        cat("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!\n")
-        if(is.null(old_ais) & is.null(bcg_records)){
-          stop(paste0("No records found for ",common_names[3]))
+        if(quiet == F){
+          if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
+            cat("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!\n")
+            if(is.null(old_ais) & is.null(bcg_records)){
+              stop(paste0("No records found for ",common_names[3]))
+            }
+          }
         }
-      }
-    }
 
-    excel_dat = excel_dat |>
-      sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
-      sf::st_transform(crs = output_crs)
+        excel_dat = excel_dat |>
+          sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
+          sf::st_transform(crs = output_crs)
 
-    post_latlon_filter_nrow_inc = nrow(excel_dat)
+        post_latlon_filter_nrow_inc = nrow(excel_dat)
 
-    # If we lost any rows in the master incidental occurrence sheet because of crummy lat/long data,
-    # notify.
-    if(quiet == F){
-      if(initial_nrow_inc != post_latlon_filter_nrow_inc){
-        cat(paste0("Note: ",
-                     initial_nrow_inc-post_latlon_filter_nrow_inc,
-                     " row(s) dropped from Master incidental sheet due to non-numeric coordinate data\n"))
-      }
-    }
+        # If we lost any rows in the master incidental occurrence sheet because of crummy lat/long data,
+        # notify.
+        if(quiet == F){
+          if(initial_nrow_inc != post_latlon_filter_nrow_inc){
+            cat(paste0("Note: ",
+                       initial_nrow_inc-post_latlon_filter_nrow_inc,
+                       " row(s) dropped from Master incidental sheet due to non-numeric coordinate data\n"))
+          }
+        }
 
-    inc = excel_dat
-    # },
-    #  error = function(e) NULL
-    #)
+    # inc = excel_dat
+      },
+    error = function(e) NULL
+    )
 
     if(quiet == F){
       if(!is.null(inc)){

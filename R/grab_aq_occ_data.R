@@ -93,7 +93,7 @@ grab_aq_occ_data = function(common_names = NULL,
     #  expr = {
         excel_dat = readxl::read_excel(path = excel_path,
                                        sheet = sheet_name) |>
-          dplyr::filter(Species %in% common_names)
+          dplyr::filter(!!rlang::sym(excel_species_var) %in% common_names)
 
         initial_nrow_inc = nrow(excel_dat)
 

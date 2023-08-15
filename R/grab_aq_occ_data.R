@@ -21,7 +21,7 @@
 grab_aq_occ_data = function(common_names = NULL,
                             excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
-                            excel_species_var = 'Common_Name',
+                            excel_species_var = 'Confirmed_Common_Name',
                             output_crs = 4326,
                             quiet = F,
                             ...){
@@ -107,7 +107,7 @@ grab_aq_occ_data = function(common_names = NULL,
                                        sheet = sheet_name) |>
           dplyr::rename(Species = excel_species_var) |>
           dplyr::filter(Species %in% common_names) |>
-          dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude)
+          dplyr::select(Species,Confirmed_Scientific_Name,Date,Location,Latitude,Longitude)
 
         initial_nrow_inc = nrow(excel_dat)
 

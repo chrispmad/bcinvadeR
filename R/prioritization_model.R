@@ -5,14 +5,18 @@
 #' @param species_occurrence_data A spatial table (sf object) of species occurrence data
 #' @param geog_units A spatial table (sf object) of polygons for which to estimate risk values
 #' @param geog_id_col One or more columns that specify the unique identity of each polygon
-#' @param risk_factors One or more variables pertaining to geographic units that could influence the risk estimation
+#' @param risk_factors One or more variables pertaining to geographic units that could
+#' influence the risk estimation; options include 'prox_to_settlements', 'rec_facilities'
 #' @param risk_factor_weights A vector of weights for the selected risk factors; number of weights must be equal to number of risk factors
 #' @param data_folder Folder on local machine for risk factor dataset(s)
 #' @param quiet Whether or not this function will return copious feedback at each step
 #' @param n_bins Number of bins to categorize risk factors into; defaults to 3
 #' @param output_folder Folder on local machine in which to put results
+#' @param species_name Species of interest's common name; will be intuited from data if not provided.
+#' @param plot_types One or more plots to be generated, including 'static', 'leaflet', and 'plotly'
+#' @param save_spatial_table TRUE or FALSE; save results table with geometries to output folder?
+#' @param apply_second_bin_to_summed_bins TRUE or FALSE; bin the sum of risk factor bins? This gives us a final risk estimate column with values of 1, 2 or 3.
 #' @param set_wd_dir set working directory for function; potentially temporary
-#' @param options list of additional options, including the species name (otherwise intuited), and whether to make a choropleth and/or sf multipolygon object output
 #'
 #' @return A table of estimated risk values for the geographic units supplied; additional possible outputs include one or more choropleth images and the corresponding polygon dataset
 #' @export
@@ -27,14 +31,12 @@ prioritization_model = function(
                          n_bins = 3,
                          data_folder = NULL,
                          output_folder = NULL,
-                         quiet = F,
                          set_wd_dir = NULL,
-                         options = list(
-                           species_name = NULL,
-                           make_choropleth = FALSE,
-                           save_spatial_table = FALSE
-                         )
-                         ){
+                         species_name = NULL,
+                         plot_types = c("none"),
+                         save_spatial_table = FALSE,
+                         apply_second_bin_to_summed_bins = TRUE,
+                         quiet = F){
 
   # Adjust working directory, if necessary.
   if(!is.null(set_wd_dir)) {
@@ -51,18 +53,20 @@ prioritization_model = function(
 
   # Check that some ID column is supplied or identifiable from the geographic unit dataset.
   if(is.null(geog_id_col)){
-    cat("\nNo column was provided as the ID column of the geographic units. Intuiting column now...")
+    if(!quiet) cat("\nNo column was provided as the ID column of the geographic units. Intuiting column now...")
     if(sum(str_detect(names(geog_units), '(DISTRICT_NAME|REGION_NAME|GNIS_NA)')) == 0) {
       stop("No suitable ID column for geographic units could be automatically detected; please supply a column name.")
     } else {
       geog_id_col = names(geog_units)[str_detect(names(geog_units),'(DISTRICT_NAME|REGION_NAME|GNIS_NA)')][1]
-    cat(paste0("\nLikely column that will be used from here onwards: ",geog_id_col))
+    if(!quiet) cat(paste0("\nLikely column that will be used from here onwards: ",geog_id_col))
     }
   }
 
-  # # Check that we have the same number of elements in
-  # # the risk_factors vector and the vector of weights.
-  # test() stop("The number of additional inputs and associated weights is not equal.")
+  # Check that we have the same number of elements in
+  # the risk_factors vector and the vector of weights.
+  if(length(risk_factors) != length(risk_factor_weights)){
+    stop("The number of additional inputs and associated weights is not equal.")
+  }
 
   # # Check that species and spatial data overlap.
   # test()
@@ -73,7 +77,7 @@ prioritization_model = function(
   # test()
 
   # Find the likely species name based on input data.
-  species_name = intuit_species_name(options$species_name, species_occurrence_data, quiet)
+  species_name = intuit_species_name(species_name, species_occurrence_data, quiet)
 
   # Find the likely data and output folders, if not supplied.
   the_folders = check_data_and_output_folders(data_folder, output_folder, quiet)
@@ -94,9 +98,7 @@ prioritization_model = function(
   geog_units = geog_units |>
     mutate(num_occ = tidyr::replace_na(num_occ, 0))
 
-  # # Load / calculate / join additional inputs to geog_units
-  # risk_factors_list = list()
-
+  # Load / calculate / join additional inputs to geog_units
   for(i in 1:length(risk_factors)){
 
     input = risk_factors[i]
@@ -123,21 +125,33 @@ prioritization_model = function(
   # Calculate the overall risk estimate from our bins!
   geog_units = geog_units |> mutate(summed_risk_factor_bins = rowSums(across(ends_with("_bin"))))
 
-  # Make a choropleth?
-  if(options$make_choropleth){
+  # # If apply_second_bin_to_summed_bins is TRUE in options, add that final column.
+  # if(apply_second_bin_to_summed_bins) {
+    geog_units = geog_units |> mutate(risk_estimate_bin = as.numeric(cut(summed_risk_factor_bins, n_bins)))
+  # }
 
-    the_choropleth = make_choropleth(geog_units)
+  # Make plots? If yes, could be one or more of static, plotly, or leaflet.
+  if(plot_types[1] != 'none'){
 
-    time_suffix = str_remove(str_replace_all(Sys.time(),':',"-"),"-[0-9]+\\.[0-9]*$")
+    time_suffix = str_replace(str_remove(str_replace_all(Sys.time(),':',"-"),"-[0-9]+\\.[0-9]*$"),' ','_')
 
-    choropleth_filename = paste0(output_folder,'/choropleth_',time_suffix,'.png')
+    if('static' %in% plot_types){
+      # If no folder for static plots inside output folder, create it.
+      if(!dir.exists(paste0(output_folder,'/static_plots/'))) dir.create(paste0(output_folder,'/static_plots/'))
+      make_ggplots(geog_units, geog_id_col, time_suffix, output_folder)
+    }
+    if('plotly' %in% plot_types){
+      make_plotly(geog_units, geog_id_col, time_suffix, output_folder, binned_variables)
+    }
+    if('leaflet' %in% plot_types){
+      make_leaflet(geog_units, geog_id_col, time_suffix, output_folder, binned_variables, n_bins)
+    }
 
-    save_choropleth(the_choropleth, choropleth_filename)
   }
 
   # Output a spatial object with risk values.
-  if(options$save_spatial_table){
-    write_sf(geog_units, paste0(output_folder,'/',likely_sp_name,'prioritization_model_output.gpkg'))
+  if(save_spatial_table){
+    write_sf(geog_units, paste0(output_folder,'/',species_name,'_prioritization_model_output.gpkg'))
   }
 
   # Drop geometry column so that our output is a simple table.

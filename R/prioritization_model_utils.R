@@ -74,7 +74,9 @@ check_data_folder_for_input = function(input_name,
                                        data_folder){
 
   data_file_name = case_when(
-    input_name == 'prox_to_settlements' ~ 'bc_settlements.gpkg'
+    input_name == 'prox_to_settlements' ~ 'bc_settlements.gpkg',
+    input_name == 'rec_facilities' ~ 'rec_facilities.gpkg'
+
   )
 
   cat(paste0("\nChecking data folder for requisite spatial files to calculate ",input_name))
@@ -106,51 +108,18 @@ download_additional_input = function(data_file_name, data_folder, quiet = F){
     settlements = bcmaps::bc_cities() |> sf::st_transform(crs = 4326)
     write_sf(settlements, paste0(data_folder,"/",data_file_name))
   }
-}
 
-
-# ==============================
-
-# Potentially multi-purpose data processing function. Currently just works for spatial files.
-
-#' Title
-#'
-#' @param input_name
-#' @param input_weight
-#' @param n_bins
-#' @param geog_units
-#' @param geog_id_col
-#' @param data_folder
-#' @param quiet
-#'
-#' @return
-#' @export
-#'
-#' @examples
-process_input_data = function(input_name, input_weight, n_bins, geog_units, geog_id_col, data_folder, quiet){
-
-  if(input_name == 'prox_to_settlements'){
-    cat("\nBC settlement geopackage file read in...")
-    dat = read_sf(paste0(data_folder,'/bc_settlements.gpkg'))
-
-    distance_matrix = sf::st_distance(dat, geog_units) |>
-      as_tibble() |>
-      sapply(as.numeric) |>
-      as_tibble()
-
-    if(!quiet) cat("\nDistance matrix calculated...")
-
-    output = distance_matrix |>
-      reframe(across(everything(), \(x) min(round(x/1000),2))) |>
-      set_names(geog_units[[geog_id_col]]) |>
-      pivot_longer(everything(), names_to = geog_id_col, values_to = 'prox_to_settlements_raw')
-
-    output = output |>
-      mutate(prox_to_settlements_bin = as.numeric(cut(1/prox_to_settlements_raw, n_bins)))
-
-    output
+  if(data_file_name == "rec_facilities.gpkg"){
+    rec_facilities = bcdata::bcdc_query_geodata('recreational-features-inventory') |>
+      bcdata::filter(bcdata::INTERSECTS(geog_units)) |>
+      bcdata::collect() |>
+      sf::st_transform(crs = 4326)
+    write_sf(rec_facilities, paste0(data_folder,"/",data_file_name))
   }
 }
+
+
+
 
 # ==============================
 

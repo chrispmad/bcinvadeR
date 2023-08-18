@@ -19,15 +19,20 @@
 #' additional risk factor layers.
 #'
 #' @examples
-process_input_data = function(input_name, input_weight, n_bins, geog_units, geog_id_col, data_folder, quiet){
+process_input_data = function(input_name, input_weight, input_type, n_bins, geog_units, geog_id_col, data_folder, quiet){
 
-  if(input_name == 'prox_to_settlements'){
-    output = process_for_prox_to_settlements(input_name, input_weight, n_bins,
-                                             geog_units, geog_id_col, data_folder, quiet)
-  }
-  if(input_name == 'rec_facilities'){
-    output = process_for_rec_facilities(input_name, input_weight, n_bins,
-                                             geog_units, geog_id_col, data_folder, quiet)
+  if(input_type == 'preset'){
+    if(input_name == 'prox_to_settlements'){
+      output = process_for_prox_to_settlements(input_name, input_weight, n_bins,
+                                               geog_units, geog_id_col, data_folder, quiet)
+    }
+    if(input_name == 'rec_facilities'){
+      output = process_for_spatial_layers(input_name, input_weight, n_bins,
+                                          geog_units, geog_id_col, data_folder, quiet)
+    }
+  } else {
+    output = process_for_user_data(input_name, input_weight, n_bins,
+                                   geog_units, geog_id_col, data_folder, quiet)
   }
   output
 }
@@ -56,21 +61,66 @@ process_for_prox_to_settlements = function(input_name, input_weight, n_bins, geo
 }
 
 # ==============================
-# Proximity to settlements
+# Process for spatial layers
 
-process_for_rec_facilities = function(input_name, input_weight, n_bins, geog_units, geog_id_col, data_folder, quiet){
+process_for_spatial_layers = function(input_name, input_weight, n_bins, geog_units, geog_id_col, data_folder, quiet){
   if(!quiet) cat("\nRecreational facilities geopackage file read in...")
-  dat = read_sf(paste0(data_folder,'/rec_facilities.gpkg'))
+
+  if(file.exists(paste0(data_folder,'/',input_name,'.gpkg'))){
+    dat = read_sf(paste0(data_folder,'/',input_name,'.gpkg')) |> sf::st_transform(crs = 4326)
+  }
+  if(file.exists(paste0(data_folder,'/',input_name,'.shp'))){
+    dat = read_sf(paste0(data_folder,'/',input_name,'.shp')) |> sf::st_transform(crs = 4326)
+  }
 
   output = dat |>
     sf::st_join(geog_units, st_intersects) |>
     sf::st_drop_geometry() |>
-    dplyr::count(!!sym(geog_id_col), name = 'rec_facilities_raw')
+    dplyr::count(!!sym(geog_id_col),
+                 name = paste0(stringr::str_remove_all(input_name,'\\.[a-zA-Z]+$'),'_raw')) |>
+    filter(!is.na(!!sym(geog_id_col)))
 
   output = output |>
-    mutate(rec_facilities_bin = as.numeric(cut(rec_facilities_raw, n_bins)))
+    mutate(!!sym(paste0(stringr::str_remove_all(input_name,'\\.[a-zA-Z]+$'),'_bin')) := as.numeric(cut(!!sym(paste0(stringr::str_remove_all(input_name,'\\.[a-zA-Z]+$'),'_raw')), n_bins)))
 }
 
-# all_layers = bcdc_list()
-# all_layers[str_detect(all_layers,'recreation')]
+# ===================================
+# User Data Processing Logic
 
+process_for_user_data = function(input_name, input_weight, n_bins, geog_units, geog_id_col, data_folder, quiet){
+  # Is the user file format one of the acceptable options?
+
+  # if(!stringr::str_detect(input_name,'(\\.shp|\\.gpkg|\\.csv|\\.xlsx)$')){
+  #   # If not, give error.
+  #   stop(paste0("Error: ",input_name," must be one of .xlsx, .csv, .shp or .gpkg"))
+  # }
+  # If yes, read in data
+  if(paste0(input_name,".shp") %in% list.files(data_folder) | paste0(input_name,".gpkg") %in% list.files(data_folder)){
+    # stringr::str_detect(input_name,'(\\.shp|\\.gpkg)$')){
+    # Spatial input from user
+    output = process_for_spatial_layers(input_name, input_weight, n_bins,
+                                        geog_units, geog_id_col, data_folder, quiet)
+  } else {
+    if(paste0(input_name,".csv") %in% list.files(data_folder)){
+      # .CSV file from user
+      user_dat = read.csv(paste0(data_folder,'/',input_name,'.csv'))
+    }
+    if(paste0(input_name,".xlsx") %in% list.files(data_folder)){
+      user_dat = openxlsx::read.xlsx(paste0(data_folder,'/',input_name,'.xlsx'))
+    }
+    # Summarise numeric column(s) by the geog_unit grouping column.
+    output = user_dat |>
+      group_by(!!sym(geog_id_col)) |>
+      summarise(across(where(is.numeric), \(x) sum(x, na.rm=T)))
+
+    columns_to_bin = names(output[,-1])
+
+    for(column_name in columns_to_bin){
+      output = output |>
+        dplyr::mutate(!!sym(paste0(column_name,'_raw')) := as.numeric(!!sym(column_name))) |>
+        dplyr::select(-column_name) |>
+        mutate(!!sym(paste0(column_name,'_bin')) := as.numeric(cut(!!sym(paste0(column_name,'_raw')),n_bins)))
+    }
+    output
+  }
+}

@@ -1,8 +1,5 @@
-# Brain map for generalized prioritization model function.
-
-#' Title
+#' Title Run a prioritization model for a species of interest
 #'
-#' @param species_occurrence_data A spatial table (sf object) of species occurrence data
 #' @param geog_units A spatial table (sf object) of polygons for which to estimate risk values
 #' @param geog_id_col One or more columns that specify the unique identity of each polygon
 #' @param risk_factors One or more variables pertaining to geographic units that could
@@ -17,15 +14,15 @@
 #' @param save_spatial_table TRUE or FALSE; save results table with geometries to output folder?
 #' @param apply_second_bin_to_summed_bins TRUE or FALSE; bin the sum of risk factor bins? This gives us a final risk estimate column with values of 1, 2 or 3.
 #' @param set_wd_dir set working directory for function; potentially temporary
+#' @param ggplot_types A vector of plot types to make ggplots for; currently only bar_graph is implemented
 #'
-#' @return A table of estimated risk values for the geographic units supplied; additional possible outputs include one or more choropleth images and the corresponding polygon dataset
+#' @return A table of estimated overall risk to ecosystem function based on the risk factors supplied; additional possible outputs include one or more choropleth images and the corresponding polygon dataset
 #' @export
 #'
 #' @examples
 prioritization_model = function(
                          geog_units,
                          geog_id_col = NULL,
-                         species_occurrence_data,
                          risk_factors = c(NA),
                          risk_factor_weights = c(NA),
                          n_bins = 3,
@@ -36,6 +33,7 @@ prioritization_model = function(
                          plot_types = c("none"),
                          save_spatial_table = FALSE,
                          apply_second_bin_to_summed_bins = TRUE,
+                         ggplot_types = 'bar_graph',
                          quiet = F){
 
   # Adjust working directory, if necessary.
@@ -46,6 +44,12 @@ prioritization_model = function(
 
   # # Make sure the first two layers are spatial.
   # test()
+
+  # Vector of preset risk layers
+  preset_risk_layers = c("prox_to_settlements","rec_facilities")
+
+  # If the user included a filetype suffix in risk factors, remove now.
+  risk_factors = stringr::str_remove_all(risk_factors, '\\..*$')
 
   # Convert CRS of sp_occ_dat and geog_units to EPSG WGS84
   species_occurrence_data = sf::st_transform(species_occurrence_data, 4326)
@@ -96,9 +100,11 @@ prioritization_model = function(
 
   # Replace NA for species occurrence with 0.
   geog_units = geog_units |>
-    mutate(num_occ = tidyr::replace_na(num_occ, 0))
+    mutate(num_occ = tidyr::replace_na(num_occ, 0)) |>
+    # Add bin for num_occ
+    mutate(num_occ_bin = as.numeric(cut(num_occ, n_bins)))
 
-  # Load / calculate / join additional inputs to geog_units
+  # Load, process, and join additional inputs to geog_units
   for(i in 1:length(risk_factors)){
 
     input = risk_factors[i]
@@ -106,11 +112,24 @@ prioritization_model = function(
 
     if(!quiet) cat(paste0("\nAssessing input ",input,"..."))
 
-    # Do we have the input already on our local machine? If not, download it.
-    check_data_folder_for_input(input, data_folder)
+    if(input %in% all_of(preset_risk_layers)){
+      input_type = 'preset'
+    } else {
+      input_type = 'user_supplied'
+    }
 
-    # Join input to geographic units
-    data_to_join = process_input_data(input, input_weight, n_bins, geog_units, geog_id_col, data_folder, quiet)
+    # Do we have the input already on our local machine? If not, download it.
+    check_data_folder_for_input(input, input_type, data_folder, quiet)
+
+    # Prepare input data to be joined to geographic units
+    data_to_join = process_input_data(input, input_weight, input_type, n_bins, geog_units, geog_id_col, data_folder, quiet)
+
+    # Add weighted version of input risk factor bin.
+    columns_to_add_weighted_bin = names(data_to_join[,stringr::str_detect(names(data_to_join),'_bin$')])
+
+    for(column in columns_to_add_weighted_bin){
+      data_to_join[[paste0(column,"_weighted")]] = data_to_join[[column]] * input_weight
+    }
 
     # If the data_to_join has duplicate rows for the geographic units, flag this
     # and give the user a warning.
@@ -118,12 +137,18 @@ prioritization_model = function(
       warning("Warning: ",input," has more rows than the geographic units, indicating duplication in the input processing step. Probably worth reviewing that before continuing!")
     }
     # Left-join the processed data to geog_units.
-    geog_units = left_join(geog_units, data_to_join, by = geog_id_col)
+
+    geog_units = left_join(geog_units, data_to_join, by = geog_id_col) |>
+      # If the data to join in this loop doesn't include a row for each
+      # geog_unit, replace NA from left_join with 0.
+      mutate(across(names(data_to_join[,-1]), \(x) replace_na(x, 0)))
     if(!quiet) cat(paste0("\n",input," successfully joined to geog_units"))
   }
 
   # Calculate the overall risk estimate from our bins!
-  geog_units = geog_units |> mutate(summed_risk_factor_bins = rowSums(across(ends_with("_bin"))))
+  geog_units = geog_units |>
+    #Apply weights to bins temporarily, so they affect the summed_risk_factor_bins
+    mutate(summed_risk_factor_bins = rowSums(across(ends_with("_bin_weighted"))))
 
   # # If apply_second_bin_to_summed_bins is TRUE in options, add that final column.
   # if(apply_second_bin_to_summed_bins) {
@@ -138,13 +163,13 @@ prioritization_model = function(
     if('static' %in% plot_types){
       # If no folder for static plots inside output folder, create it.
       if(!dir.exists(paste0(output_folder,'/static_plots/'))) dir.create(paste0(output_folder,'/static_plots/'))
-      make_ggplots(geog_units, geog_id_col, time_suffix, output_folder)
+      make_ggplots(geog_units, geog_id_col, time_suffix, output_folder, ggplot_types)
     }
     if('plotly' %in% plot_types){
       make_plotly(geog_units, geog_id_col, time_suffix, output_folder, binned_variables)
     }
     if('leaflet' %in% plot_types){
-      make_leaflet(geog_units, geog_id_col, time_suffix, output_folder, binned_variables, n_bins)
+      make_leaflet(geog_units, geog_id_col, time_suffix, output_folder, n_bins)
     }
 
   }

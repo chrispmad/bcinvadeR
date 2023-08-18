@@ -71,50 +71,57 @@ sum_spatial_data_to_geog_units = function(dat,
 # check if given additional input dataset is in data folder. If not, download.
 
 check_data_folder_for_input = function(input_name,
-                                       data_folder){
+                                       input_type,
+                                       data_folder,
+                                       quiet){
 
   data_file_name = case_when(
     input_name == 'prox_to_settlements' ~ 'bc_settlements.gpkg',
-    input_name == 'rec_facilities' ~ 'rec_facilities.gpkg'
-
+    input_name == 'rec_facilities' ~ 'rec_facilities.gpkg',
+     T ~ input_name
   )
 
-  cat(paste0("\nChecking data folder for requisite spatial files to calculate ",input_name))
+  if(!quiet) cat(paste0("\nChecking data folder for requisite spatial files to calculate ",input_name))
 
-  if(!file.exists(paste0(data_folder,'/',data_file_name))){
+  if(!input_name %in% stringr::str_remove_all(list.files(data_folder),'\\..*$')){
+    # !file.exists(paste0(data_folder,'/',data_file_name))){
 
-    cat(paste0("\n",data_file_name," not found in ",data_folder,"; attempting to download"))
-
-    download_additional_input(data_file_name, data_folder, quiet = F)
+    if(input_type == 'preset'){
+      if(!quiet) cat(paste0("\n",input_name," not found in ",data_folder,"; attempting to download"))
+      download_additional_input(input_name, data_folder, quiet = F)
+    } else {
+      if(!quiet) cat(paste0("\n",input_name," not found in ",data_folder,"; please place file in this folder, then re-run prioritization model"))
+      stop()
+    }
   } else {
-    cat(paste0("\n",data_file_name," present in data folder"))
+    if(!quiet) cat(paste0("\n",input_name," present in data folder"))
   }
 }
 
 # ==============================
 
 # Multi-purpose download function for possible additional input layers.
-download_additional_input = function(data_file_name, data_folder, quiet = F){
+download_additional_input = function(input_name, data_folder, quiet = F){
 
   # # Do we have access / writing privileges to the supplied write_folder?
   # test() stop("Not able to save spatial layers to the supplied write folder!")
 
-  if(data_file_name == "maj_roads.gpkg"){
+  if(input_name == "maj_roads"){
     maj_roads = download_maj_roads()
     write_sf(maj_roads, data_folder)
   }
 
-  if(data_file_name == "bc_settlements.gpkg"){
+  if(input_name == "bc_settlements"){
     settlements = bcmaps::bc_cities() |> sf::st_transform(crs = 4326)
-    write_sf(settlements, paste0(data_folder,"/",data_file_name))
+    write_sf(settlements, paste0(data_folder,"/",input_name,".gpkg"))
   }
 
-  if(data_file_name == "rec_facilities.gpkg"){
+  if(input_name == "rec_facilities"){
     rec_facilities = bcdata::bcdc_query_geodata('recreational-features-inventory') |>
       bcdata::filter(bcdata::INTERSECTS(geog_units)) |>
       bcdata::collect() |>
       sf::st_transform(crs = 4326)
-    write_sf(rec_facilities, paste0(data_folder,"/",data_file_name))
+    write_sf(rec_facilities, paste0(data_folder,"/",data_file_name,".gpkg"))
   }
 }
 

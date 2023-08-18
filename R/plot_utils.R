@@ -1,58 +1,96 @@
 # Functions to make plots for prioritization model
 
-make_ggplots = function(geog_units, geog_id_col, time_suffix, output_folder){
+make_ggplots = function(geog_units, geog_id_col, time_suffix, output_folder, ggplot_types){
 
   binned_variables = names(geog_units |> sf::st_drop_geometry() |> dplyr::select(ends_with('bin')))
 
   make_static_ggplot_maps(geog_units, geog_id_col, time_suffix, output_folder, binned_variables)
 
-  make_static_ggplot_boxplots(geog_units, geog_id_col, time_suffix, output_folder, binned_variables)
+  make_static_ggplot_plots(geog_units, geog_id_col, time_suffix, output_folder, binned_variables, ggplot_types)
 }
 
 make_plotly = function(geog_units, geog_id_col, time_suffix, output_folder){
 
 }
 
-make_leaflet = function(geog_units, geog_id_col, time_suffix, output_folder, binned_variables, n_bins){
+make_leaflet = function(geog_units, geog_id_col, time_suffix, output_folder, n_bins){
 
   binned_variables = names(geog_units |> sf::st_drop_geometry() |> dplyr::select(ends_with('bin')))
+
+  my_pal = leaflet::colorFactor(palette = 'RdYlGn',
+                                levels = c(0:n_bins),
+                                reverse = T)
 
   my_leaf = leaflet::leaflet() |>
     leaflet::addTiles(group = 'OpenStreetMaps') |>
     leaflet::addProviderTiles(provider = leaflet::providers$CartoDB, group = 'CartoDB') |>
-    leaflet::addLayersControl(baseGroups = c("OpenStreetMaps","CartoDB"),
-                              overlayGroups = names(binned_variables),
+    leaflet::addLayersControl(baseGroups = c("CartoDB","OpenStreetMaps"),
+                              overlayGroups = binned_variables,
                               options = leaflet::layersControlOptions(collapsed = F)) |>
     leaflet.extras::addSearchFeatures(
       targetGroups = c('risk_estimate_bin'),
       options = leaflet.extras::searchFeaturesOptions(zoom = 4, openPopup=TRUE)
-    )
+    )  |>
+    leaflet::addLegend(pal = my_pal, values = c(0:3))
 
-  my_pal = leaflet::colorFactor(palette = 'RdYlGn',
-                                levels = c(1:n_bins),
-                                reverse = T)
 
   # Add variables to map, one by one.
   add_layer_to_leaflet = function(leaflet_map, this_var){
+
+    if(this_var == 'num_occ_bin'){
+
+      dat = geog_units |>
+        dplyr::select(!!sym(geog_id_col),this_var) |>
+        sf::st_transform(crs = 4326)
+
+      the_label = paste0(geog_units[[geog_id_col]],": bin ",geog_units[[this_var]],
+                         " (raw number: ",geog_units[[stringr::str_remove(this_var,'_bin')]],")")
+    }
+
+    if(this_var == 'risk_estimate_bin'){
+
+      dat = geog_units |>
+        dplyr::select(!!sym(geog_id_col),this_var) |>
+        sf::st_transform(crs = 4326)
+
+      the_label = paste0(geog_units[[geog_id_col]],": ",geog_units[[this_var]])
+    }
+
+    if(!this_var %in% c("num_occ_bin","risk_estimate_bin")){
+
+      dat = geog_units |>
+        dplyr::select(!!sym(geog_id_col),this_var,!!sym(stringr::str_replace(this_var,'_bin','_raw'))) |>
+        sf::st_transform(crs = 4326)
+
+      the_label = paste0(geog_units[[geog_id_col]],": bin ",geog_units[[this_var]],
+                         " (raw number: ",geog_units[[stringr::str_replace(this_var,'_bin','_raw')]],")")
+    }
+
     leaflet_map = leaflet_map |>
       leaflet::addPolygons(
         weight = 1,
         color = 'black',
         fillColor = my_pal(geog_units[[this_var]]),
         fillOpacity = 0.80,
-        label = paste0(geog_units[[geog_id_col]],": ",geog_units[[this_var]]),
+        label = the_label,
         group = this_var,
-        data = geog_units |> dplyr::select(!!sym(geog_id_col),this_var) |> sf::st_transform(crs = 4326)
+        data = dat
       )
   }
 
-  for(the_name in names(binned_variables)){
+  for(the_name in binned_variables){
     my_leaf = add_layer_to_leaflet(my_leaf, the_name)
+
+    # Hide all layers on launch except the risk_estimate_bin!
+    if(the_name != 'risk_estimate_bin'){
+      my_leaf = my_leaf |>
+        leaflet::hideGroup(group = the_name)
+    }
   }
 
   my_leaf
 
-  saveWidget(my_leaf, "output/my_leaf_test.html", selfcontained = F, libdir = "lib")
+  htmlwidgets::saveWidget(my_leaf, "output/Interactive_leaflet_map.html", selfcontained = F, libdir = "lib")
 }
 # library(plotly)
 # library(htmlwidgets)
@@ -81,7 +119,6 @@ make_static_ggplot_maps = function(geog_units, geog_id_col, time_suffix, output_
       dplyr::select(geog_id_col, this_var) |>
       dplyr::mutate(!!sym(this_var) := factor(!!sym(this_var), levels = c(3,2,1)))
 
-    browser()
     static_plot = ggplot() +
       geom_sf(data = this_dat, aes(fill = !!sym(this_var)))
 
@@ -91,8 +128,9 @@ make_static_ggplot_maps = function(geog_units, geog_id_col, time_suffix, output_
   }
 }
 
-make_static_ggplot_boxplots = function(geog_units, geog_id_col, time_suffix, output_folder, binned_variables){
+make_static_ggplot_plots = function(geog_units, geog_id_col, time_suffix, output_folder, binned_variables, ggplot_types){
 
+  if(ggplot_types == 'bar_graph'){
   boxplot_dat = geog_units |>
     sf::st_drop_geometry() |>
     dplyr::select(geog_id_col, ends_with('raw')) |>
@@ -103,14 +141,23 @@ make_static_ggplot_boxplots = function(geog_units, geog_id_col, time_suffix, out
 
   boxplots = boxplot_dat |>
     ggplot() +
-    geom_boxplot(aes(x = vars, y = values)) +
-    geom_point(aes(x = vars, y = values),
-               col = 'red',
-               data = boxplot_dat[boxplot_dat$outliers == T,]) +
-    ggrepel::geom_label_repel(aes(x = vars, y = values, label = geog_id_col),
-               data = boxplot_dat[boxplot_dat$outliers == T,])
+    geom_col(aes(x = !!sym(geog_id_col), y = values, fill = vars)) +
+    facet_wrap( ~ vars, scales = 'free') +
+    labs(y = 'Values', x = 'Geographic Units') +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+          legend.position = 'none')
+  # boxplots = boxplot_dat |>
+  #   ggplot() +
+  #   geom_boxplot(aes(x = vars, y = values)) +
+  #   geom_point(aes(x = vars, y = values),
+  #              col = 'red',
+  #              data = boxplot_dat[boxplot_dat$outliers == T,]) +
+  #   ggrepel::geom_label_repel(aes(x = vars, y = values, label = geog_id_col),
+  #              data = boxplot_dat[boxplot_dat$outliers == T,]) +
+  #   facet_wrap( ~ vars)
 
-    plot_filename = paste0(output_folder,'/static_plots/boxplots.png')
+    plot_filename = paste0(output_folder,'/static_plots/bar_graphs.png')
 
     ggsave(plot_filename, boxplots, width = 6, height = 5)
+  }
 }

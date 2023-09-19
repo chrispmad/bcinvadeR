@@ -115,16 +115,17 @@ make_static_ggplot_maps = function(geog_units, geog_id_col, time_suffix, output_
 
     this_var = binned_variables[i]
 
+    if(this_var == 'angler_locations') browser()
     this_dat = geog_units |>
       dplyr::select(geog_id_col, this_var) |>
-      dplyr::mutate(!!sym(this_var) := factor(!!sym(this_var), levels = c(3,2,1)))
+      dplyr::mutate(!!rlang::sym(this_var) := factor(!!rlang::sym(this_var), levels = c(3,2,1)))
 
-    static_plot = ggplot() +
-      geom_sf(data = this_dat, aes(fill = !!sym(this_var)))
+    static_plot = ggplot2::ggplot() +
+      ggplot2::geom_sf(data = this_dat, ggplot2::aes(fill = !!rlang::sym(this_var)))
 
     plot_filename = paste0(output_folder,'/static_plots/',this_var,'_static.png')
 
-    ggsave(plot_filename, static_plot, width = 6, height = 4)
+    ggplot2::ggsave(plot_filename, static_plot, width = 6, height = 4)
   }
 }
 
@@ -133,18 +134,18 @@ make_static_ggplot_plots = function(geog_units, geog_id_col, time_suffix, output
   if(ggplot_types == 'bar_graph'){
   boxplot_dat = geog_units |>
     sf::st_drop_geometry() |>
-    dplyr::select(geog_id_col, ends_with('raw')) |>
-    pivot_longer(cols = -geog_id_col, names_to = "vars", values_to = "values")
+    dplyr::select(geog_id_col, dplyr::ends_with('raw')) |>
+    tidyr::pivot_longer(cols = -geog_id_col, names_to = "vars", values_to = "values")
 
   boxplot_dat = boxplot_dat |>
-    mutate(outliers = values > 5*mean(values))
+    dplyr::mutate(outliers = values > 5*mean(values))
 
   boxplots = boxplot_dat |>
-    ggplot() +
-    geom_col(aes(x = !!sym(geog_id_col), y = values, fill = vars)) +
-    facet_wrap( ~ vars, scales = 'free') +
-    labs(y = 'Values', x = 'Geographic Units') +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1),
+    ggplot2::ggplot() +
+    ggplot2::geom_col(ggplot2::aes(x = !!rlang::sym(geog_id_col), y = values, fill = vars)) +
+    ggplot2::facet_wrap( ~ vars, scales = 'free') +
+    ggplot2::labs(y = 'Values', x = 'Geographic Units') +
+    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 45, hjust = 1, vjust = 1),
           legend.position = 'none')
   # boxplots = boxplot_dat |>
   #   ggplot() +
@@ -158,6 +159,6 @@ make_static_ggplot_plots = function(geog_units, geog_id_col, time_suffix, output
 
     plot_filename = paste0(output_folder,'/static_plots/bar_graphs.png')
 
-    ggsave(plot_filename, boxplots, width = 6, height = 5)
+    ggplot2::ggsave(plot_filename, boxplots, width = 6, height = 5)
   }
 }

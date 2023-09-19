@@ -57,6 +57,7 @@ A leaflet map of BC showing species occurrence points, optionally adding backgro
 Title
 }
 \examples{
+\dontrun{
 # using the toy dataset 'lizards', make a map!
 
 my_map = occdat_leafmap(dat = lizards, location_variable = 'Location', bg_regions = 'regions')
@@ -70,5 +71,5 @@ take_snapshot = TRUE, folder_for_snapshot = './map_pngs/',
 snapshot_name = 'Goldfish in British Columbia')
 
 map_with_png
-
+}
 }

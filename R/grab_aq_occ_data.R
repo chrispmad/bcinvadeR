@@ -7,6 +7,7 @@
 #' @param output_crs Coordinate Reference System (i.e. projection system); defaults to 4326 (WGS 84), another common option for BC is 3005.
 #' @param quiet Boolean to determine amount of feedback given by function
 #' @param ... Additional arguments
+#' @param sources Which layers to search for occurrence data; one or more of 'SPI','Old Aquatic','Incident Reports', and 'iNaturalist'
 #'
 #' @return Aquatic occurrence data in British Columbia; optional to add in one's own excel file from local machine.
 #' @export
@@ -19,7 +20,8 @@
 #' invasive_fish = grab_aq_occ_data(common_names = c("black crappie","bullhead",
 #' "black bullhead","brown bullhead","yellow bullhead"))
 grab_aq_occ_data = function(common_names = NULL,
-                            excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
+                            sources = c("SPI","Old Aquatic","Incident Reports","iNaturalist"),
+                            excel_path = '5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
                             excel_species_var = 'Submitted_Common_Name',
                             output_crs = 4326,
@@ -42,128 +44,180 @@ grab_aq_occ_data = function(common_names = NULL,
     cat("Looking for records in the Wildlife Species Inventory Incidental Observations layer on BC Warehouse...\n")
   }
 
-  ## BCG Warehouse Data
-  bcg_records = tryCatch(
-    expr = bcdata::bcdc_query_geodata('aca81811-4b08-4382-9af7-204e0b9d2448') |>
-      dplyr::filter(SPECIES_NAME %in% common_names) |>
-      bcdata::collect() |>
-      sf::st_transform(crs = output_crs) |>
-      dplyr::select(Date = OBSERVATION_DATE, Species = SPECIES_NAME, Location = GAZETTED_NAME) |>
-      dplyr::mutate(DataSource = 'BCG fish layer') |>
-      dplyr::mutate(Date = as.character(Date)) |>
-      dplyr::select(DataSource, dplyr::everything()),
-    error = function(e) NULL
-  )
-
-  if(quiet == F){
-    if(!is.null(bcg_records)){
-      cat(paste0(nrow(bcg_records)," records...\n"))
-    } else {
-      cat("No records here!\n")
-    }
-  }
-
-  search_results = append(search_results, list(bcg_records))
-
-  if(quiet == F){
-    cat("Looking for records in the Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
-  }
-
-  # Look in the old AIS layer
-  old_ais = tryCatch(
-    expr = suppressWarnings(
-      bcdata::bcdc_query_geodata('d9613096-b2fe-43b4-9be1-d82a3b805082') |>
-      dplyr::filter(ENGLISH_NAME %in% common_names) |>
-      bcdata::collect() |>
-      sf::st_transform(crs = output_crs) |>
-      dplyr::mutate(Species = stringr::str_to_title(ENGLISH_NAME)) |>
-      dplyr::mutate(Location = ifelse(is.na(BCGNIS_NAME),LOCATION_INFORMATION,stringr::str_to_title(BCGNIS_NAME))) |>
-      dplyr::select(Species, Date = COLLECTION_DATE, Location) |>
-      dplyr::mutate(DataSource = 'Old BCG AIS layer') |>
-      dplyr::select(DataSource, dplyr::everything())
-      ),
-    error = function(e) NULL
-  )
-
-  if(quiet == F){
-    if(!is.null(old_ais)){
-      cat(paste0(nrow(old_ais)," records...\n"))
-    } else {
-      cat("No records here!\n")
-    }
-  }
-
-  search_results = append(search_results, list(old_ais))
-
-  if(!is.null(excel_path) & !is.null(sheet_name) & !is.null(excel_species_var)){
-
-    if(quiet == F){
-      cat("Looking for records in the Master Incidence Report Records excel file...\n")
-    }
-
-    inc = tryCatch(
-      expr = {
-        excel_dat = readxl::read_excel(path = excel_path,
-                                       sheet = sheet_name) |>
-          dplyr::rename(Species = excel_species_var) |>
-          dplyr::filter(Species %in% common_names) |>
-          dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude)
-
-        initial_nrow_inc = nrow(excel_dat)
-
-        # Filter out rows with no lat/long
-        excel_dat = suppressWarnings(
-          excel_dat |>
-            dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
-            dplyr::mutate(Date = as.character(Date)) |>
-            dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude) |>
-            dplyr::mutate(DataSource = 'Incidental Observation') |>
-            dplyr::select(DataSource, dplyr::everything()) |>
-            dplyr::filter(!is.na(Latitude),!is.na(Longitude))
-        )
-
-        if(quiet == F){
-          if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
-            cat("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!\n")
-            if(is.null(old_ais) & is.null(bcg_records)){
-              stop(paste0("No records found for ",common_names[3]))
-            }
-          }
-        }
-
-        excel_dat = excel_dat |>
-          sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
-          sf::st_transform(crs = output_crs)
-
-        post_latlon_filter_nrow_inc = nrow(excel_dat)
-
-        # If we lost any rows in the master incidental occurrence sheet because of crummy lat/long data,
-        # notify.
-        if(quiet == F){
-          if(initial_nrow_inc != post_latlon_filter_nrow_inc){
-            cat(paste0("Note: ",
-                       initial_nrow_inc-post_latlon_filter_nrow_inc,
-                       " row(s) dropped from Master incidental sheet due to non-numeric coordinate data\n"))
-          }
-        }
-
-    # inc = excel_dat
-      },
-    error = function(e) NULL
+  if('SPI' %in% sources){
+    ## BCG Warehouse Data
+    bcg_records = tryCatch(
+      expr = bcdata::bcdc_query_geodata('aca81811-4b08-4382-9af7-204e0b9d2448') |>
+        dplyr::filter(SPECIES_NAME %in% common_names) |>
+        bcdata::collect() |>
+        sf::st_transform(crs = output_crs) |>
+        dplyr::select(Date = 'OBSERVATION_DATE', Species = 'SPECIES_NAME', Location = 'GAZETTED_NAME') |>
+        dplyr::mutate(DataSource = 'BCG fish layer') |>
+        dplyr::mutate(Date = as.character(Date)) |>
+        dplyr::select(DataSource, dplyr::everything()),
+      error = function(e) NULL
     )
 
     if(quiet == F){
-      if(!is.null(inc)){
-        cat(paste0(nrow(inc)," records...\n"))
+      if(!is.null(bcg_records)){
+        cat(paste0(nrow(bcg_records)," records...\n"))
       } else {
         cat("No records here!\n")
       }
     }
 
-    search_results = append(search_results, list(inc))
+    search_results = append(search_results, list(bcg_records))
   }
 
+  if('Old Aquatic' %in% sources){
+    if(quiet == F){
+      cat("Looking for records in the Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
+    }
+
+    # Look in the old AIS layer
+    old_ais = tryCatch(
+      expr = suppressWarnings(
+        bcdata::bcdc_query_geodata('d9613096-b2fe-43b4-9be1-d82a3b805082') |>
+          dplyr::filter(ENGLISH_NAME %in% common_names) |>
+          bcdata::collect() |>
+          sf::st_transform(crs = output_crs) |>
+          dplyr::mutate(Species = stringr::str_to_title(ENGLISH_NAME)) |>
+          dplyr::mutate(Location = ifelse(is.na(BCGNIS_NAME),LOCATION_INFORMATION,stringr::str_to_title(BCGNIS_NAME))) |>
+          dplyr::select(Species, Date = COLLECTION_DATE, Location) |>
+          dplyr::mutate(Date = as.character(Date)) |>
+          dplyr::mutate(DataSource = 'Old BCG AIS layer') |>
+          dplyr::select(DataSource, dplyr::everything())
+      ),
+      error = function(e) NULL
+    )
+
+    if(quiet == F){
+      if(!is.null(old_ais)){
+        cat(paste0(nrow(old_ais)," records...\n"))
+      } else {
+        cat("No records here!\n")
+      }
+    }
+
+    search_results = append(search_results, list(old_ais))
+  }
+
+  if('Incident Reports' %in% sources){
+    if(!is.null(excel_path) & !is.null(sheet_name) & !is.null(excel_species_var)){
+
+      if(quiet == F){
+        cat("Looking for records in the Master Incidence Report Records excel file...\n")
+      }
+
+      if(stringr::str_detect(excel_path,"^5_Incidental Observations/")){
+        # This is likely our folder; prepend the full LAN filepath.
+        excel_path = paste0("\\\\SFP.IDIR.BCGOV/S140/S40203/RSD_ FISH & AQUATIC HABITAT BRANCH/General/2 SCIENCE - Invasives/SPECIES/", excel_path)
+      }
+
+      tryCatch(
+        expr = {
+          excel_dat = readxl::read_excel(path = excel_path,
+                                         sheet = sheet_name) |>
+            dplyr::rename(Species = excel_species_var) |>
+            dplyr::filter(Species %in% common_names) |>
+            dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude)
+
+          initial_nrow_inc = nrow(excel_dat)
+
+          # Filter out rows with no lat/long
+          inc = suppressWarnings(
+            excel_dat |>
+              dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
+              dplyr::mutate(Date = as.character(Date)) |>
+              dplyr::mutate(stringr::str_extract(Date, '[0-9]{4}-[0-9]{2}-[0-9]{2}')) |>
+              dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude) |>
+              dplyr::mutate(DataSource = 'Incidental Observation') |>
+              dplyr::select(DataSource, dplyr::everything()) |>
+              dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+          )
+
+          if(quiet == F){
+            if(nrow(inc) == 0 & initial_nrow_inc > 0){
+              cat("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!\n")
+              if(is.null(old_ais) & is.null(bcg_records)){
+                stop(paste0("No records found for ",common_names[3]))
+              }
+            }
+          }
+
+          inc = inc |>
+            dplyr::select(-Submitted_Scientific_Name) |>
+            sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
+            sf::st_transform(crs = output_crs)
+
+          post_latlon_filter_nrow_inc = nrow(inc)
+
+          # If we lost any rows in the master incidental occurrence sheet because of crummy lat/long data,
+          # notify.
+          if(quiet == F){
+            if(initial_nrow_inc != post_latlon_filter_nrow_inc){
+              cat(paste0("Note: ",
+                         initial_nrow_inc-post_latlon_filter_nrow_inc,
+                         " row(s) dropped from Master incidental sheet due to non-numeric coordinate data\n"))
+            }
+          }
+
+          excel_dat = inc
+        },
+        error = function(e) NULL
+      )
+
+      if(quiet == F){
+        if(!is.null(inc)){
+          cat(paste0(nrow(excel_dat)," records...\n"))
+        } else {
+          cat("No records here!\n")
+        }
+      }
+
+      search_results = append(search_results, list(excel_dat))
+    }
+  }
+
+  if('iNaturalist' %in% sources){
+
+    if(quiet == F){
+      cat("Looking for records in the Master Incidence Report Records excel file...\n")
+    }
+
+    inat = tryCatch(
+        expr = suppressWarnings(
+          rinat::get_inat_obs(query = common_names[3],
+                        place_id = '7085',
+                        quality = 'research',
+                        maxresults = 10000) |>
+      dplyr::filter(common_name %in% common_names) |>
+      dplyr::summarise(DataSource = 'iNaturalist',
+                    Date = stringr::str_extract(observed_on_string, '[0-9]{4}-[0-9]{2}-[0-9]{2}'),
+                    Species = common_names[3],
+                    iNat_user = user_login,
+                    iNat_report_id = id,
+                    Location = place_guess,
+                    latitude,
+                    longitude) |>
+      sf::st_as_sf(coords = c('longitude','latitude'),
+                   crs = 4326)
+      ),
+      error = function(e) NULL
+    )
+
+    if(quiet == F){
+      if(!is.null(inat)){
+        cat(paste0(nrow(inat)," records...\n"))
+      } else {
+        cat("No records here!\n")
+      }
+    }
+
+    search_results = append(search_results, list(inat))
+  }
   ## Combine datasets
+
   dataset = search_results |>
     dplyr::bind_rows()
 
@@ -177,13 +231,13 @@ grab_aq_occ_data = function(common_names = NULL,
   }
   # Make sure rows are unique
   dataset = dataset |>
-    dplyr::distinct()
+    dplyr::filter(!duplicated(paste0(Date,Species,Location,geometry)))
 
   if(quiet == FALSE){
     cat(paste0(nrow(dataset), " rows after dropping duplicates\n"))
   }
 
-  beepr::beep(5)
+  if(!quiet) beepr::beep(5)
 
   return(dataset)
 }

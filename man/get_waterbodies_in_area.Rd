@@ -2,7 +2,7 @@
 % Please edit documentation in R/get_waterbodies_in_area.R
 \name{get_waterbodies_in_area}
 \alias{get_waterbodies_in_area}
-\title{Title}
+\title{Title Download lake waterbody polygons from the BC Data Catalogue}
 \usage{
 get_waterbodies_in_area(
   area_type = c("regions", "districts"),
@@ -24,10 +24,12 @@ get_waterbodies_in_area(
 An sf object (spatial table) of lakes in the selected polygon(s) within the chosen Natural Resource area
 }
 \description{
-Title
+Title Download lake waterbody polygons from the BC Data Catalogue
 }
 \examples{
+if(interactive()){
 get_waterbodies_in_area(area_type = 'regions',
 specific_areas = c("Thompson-Okanagan","West Coast"),
 size_threshold = 100000)
+}
 }

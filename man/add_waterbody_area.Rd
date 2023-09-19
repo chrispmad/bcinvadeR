@@ -26,3 +26,9 @@ Your table with a new column 'wb_area'
 \description{
 Title Add a column for area to a table with waterbody (lake or river) names
 }
+\examples{
+\dontrun{
+my_dat = tibble(wb_name = 'Elk Lake',)
+add_waterbody_area()
+}
+}

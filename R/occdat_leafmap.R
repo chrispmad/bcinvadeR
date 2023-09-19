@@ -18,7 +18,7 @@
 #' @return A leaflet map of BC showing species occurrence points, optionally adding background regions and taking a snapshot .PNG file.
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{
 #' # using the toy dataset 'lizards', make a map!
 #'
 #' my_map = occdat_leafmap(dat = lizards, location_variable = 'Location', bg_regions = 'regions')
@@ -32,7 +32,7 @@
 #' snapshot_name = 'Goldfish in British Columbia')
 #'
 #' map_with_png
-#'
+#'}
 occdat_leafmap = function(dat,
                           species_column = 'Species',
                           location_variable = NULL,

@@ -23,7 +23,7 @@
 #'
 grab_terr_occ_data = function(common_names = NULL,
                               scientific_name = NULL,
-                              excel_path = 'J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx',
+                              excel_path = '5_Incidental Observations/Master Incidence Report Records.xlsx',
                               sheet_name = 'Aquatic Reports',
                               excel_species_var = 'Common_Name',
                               output_crs = 4326,
@@ -97,43 +97,46 @@ grab_terr_occ_data = function(common_names = NULL,
 
     cat("Looking for records in the Master Incidence Report Records excel file...\n")
 
-    #inc = tryCatch(
-    #  expr = {
-        excel_dat = readxl::read_excel(path = excel_path,
-                                       sheet = sheet_name) |>
-          dplyr::filter(!!rlang::sym(excel_species_var) %in% common_names)
+    if(stringr::str_detect(excel_path,"^5_Incidental Observations/")){
+      # This is likely our folder; prepend the full LAN filepath.
+      excel_path = paste0("\\\\SFP.IDIR.BCGOV/S140/S40203/RSD_ FISH & AQUATIC HABITAT BRANCH/General/2 SCIENCE - Invasives/SPECIES/", excel_path)
+    }
 
-        initial_nrow_inc = nrow(excel_dat)
+    excel_dat = readxl::read_excel(path = excel_path,
+                                   sheet = sheet_name) |>
+      dplyr::filter(!!rlang::sym(excel_species_var) %in% common_names)
 
-        excel_dat = excel_dat |>
-          dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
-          dplyr::mutate(Date = as.character(Date)) |>
-          dplyr::rename(Species = excel_species_var) |>
-          dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude) |>
-          dplyr::mutate(DataSource = 'Incidental Observation') |>
-          dplyr::select(DataSource, dplyr::everything()) |>
-          dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+    initial_nrow_inc = nrow(excel_dat)
 
-        if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
-          print("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!")
-          if(is.null(bcg_records_scientific) & is.null(bcg_records)){
-            stop(paste0("No records found for ",common_name[3]))
-          }
-        }
+    excel_dat = excel_dat |>
+      dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
+      dplyr::mutate(Date = as.character(Date)) |>
+      dplyr::rename(Species = excel_species_var) |>
+      dplyr::select(Species,Scientific_Name,Date,Location,Latitude,Longitude) |>
+      dplyr::mutate(DataSource = 'Incidental Observation') |>
+      dplyr::select(DataSource, dplyr::everything()) |>
+      dplyr::filter(!is.na(Latitude),!is.na(Longitude))
 
-        excel_dat = excel_dat |>
-          sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
-          sf::st_transform(crs = output_crs)
+    if(nrow(excel_dat) == 0 & initial_nrow_inc > 0){
+      print("The excel record(s) were filtered out due to lacking latitude and longitude coordinates!")
+      if(is.null(bcg_records_scientific) & is.null(bcg_records)){
+        stop(paste0("No records found for ",common_name[3]))
+      }
+    }
 
-        post_latlon_filter_nrow_inc = nrow(excel_dat)
+    excel_dat = excel_dat |>
+      sf::st_as_sf(coords = c("Longitude","Latitude"), crs = 4326) |>
+      sf::st_transform(crs = output_crs)
 
-        if(initial_nrow_inc != post_latlon_filter_nrow_inc){
-          warning(paste0("Note: ",
-                         initial_nrow_inc-post_latlon_filter_nrow_inc,
-                         " rows dropped from Master incidental sheet due to non-numeric lat/long data"))
-        }
+    post_latlon_filter_nrow_inc = nrow(excel_dat)
 
-       inc = excel_dat
+    if(initial_nrow_inc != post_latlon_filter_nrow_inc){
+      warning(paste0("Note: ",
+                     initial_nrow_inc-post_latlon_filter_nrow_inc,
+                     " rows dropped from Master incidental sheet due to non-numeric lat/long data"))
+    }
+
+    inc = excel_dat
     #  },
     #  error = function(e) NULL
     #)

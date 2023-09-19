@@ -8,26 +8,29 @@
 #' @return Your table with a new column 'wb_area'
 #' @export
 #'
-#' @examples
+#' @examples \dontrun{
+#' my_dat = tibble(wb_name = 'Elk Lake',)
+#' add_waterbody_area()
+#' }
 add_waterbody_area = function(dat, waterbody_polygons, units = c("sq_meters","sq_km","acres"), digits = 2){
 
   if(length(units) > 1) stop("Please choose one unit for area from options 'sq_meters','sq_km', or 'acres'")
   # Check there's a column named 'row_index' in dat.
   if(!'row_index' %in% names(dat)){
-    dat = dat |> mutate(row_index = dplyr::row_number())
+    dat = dat |> dplyr::mutate(row_index = dplyr::row_number())
   }
 
-  unique_wb_names = unique(dat$waterbody)
+  unique_wb_names = unique(dat['waterbody'])
 
   dat$wb_area = 0
 
   for(row in unique_wb_names){
     print(row)
 
-    dat_by_name = dat |> filter(waterbody == row)
+    dat_by_name = dat |> dplyr::filter(waterbody == row)
 
     # Do name match with polygons.
-    matched_polys = waterbody_polygons |> filter(waterbody == row)
+    matched_polys = waterbody_polygons |> dplyr::filter(waterbody == row)
 
     if(nrow(matched_polys) == 1){
       # Single name match. Nice! Grab the lake area, set to proper units, and add

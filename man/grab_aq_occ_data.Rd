@@ -6,8 +6,8 @@
 \usage{
 grab_aq_occ_data(
   common_names = NULL,
-  excel_path =
-    "J:/2 SCIENCE - Invasives/SPECIES/5_Incidental Observations/Master Incidence Report Records.xlsx",
+  sources = c("SPI", "Old Aquatic", "Incident Reports", "iNaturalist"),
+  excel_path = "5_Incidental Observations/Master Incidence Report Records.xlsx",
   sheet_name = "Aquatic Reports",
   excel_species_var = "Submitted_Common_Name",
   output_crs = 4326,
@@ -17,6 +17,8 @@ grab_aq_occ_data(
 }
 \arguments{
 \item{common_names}{A vector of common names for one or more species of interest.}
+
+\item{sources}{Which layers to search for occurrence data; one or more of 'SPI','Old Aquatic','Incident Reports', and 'iNaturalist'}
 
 \item{excel_path}{Optional; path to your excel file (must include columns Date, Species, Scientific, Location, Latitude and Longitude)}
 

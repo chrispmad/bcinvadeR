@@ -6,19 +6,22 @@
 #' @return A dataset with common typos in latitude / longitude columns corrected.
 #' @export
 #'
-#' @examples dat = data.frame(Latitude = c('48.19N','38.92','-112.10'), Longitude = c('110.392W','-123.11','49.32'))
-#' clean_coordinates(dat)
-#'
-clean_coordinates = function(dat){
+#' @examples \dontrun{
+#' dat = data.frame(Latitude = c('48.19N','38.92','-112.10'),
+#'                  Longitude = c('110.392W','-123.11','49.32')
+#'                  )
+#' clean_coords(dat)
+#' }
+clean_coords = function(dat){
   # Look at the first row of the data. Which row LIKELY has lat / long coordinates?
-  likely_lat = names(which(lapply(dat[1,], \(x) stringr::str_detect(x, '[0-9]{2}\\.[0-9]+')) == TRUE))[1]
-  likely_lon = names(which(lapply(dat[1,], \(x) stringr::str_detect(x, '[0-9]{3}\\.[0-9]+')) == TRUE))[1]
+  likely_lat = intuit_lat_col(dat)
+  likely_lng = intuit_lng_col(dat)
 
-  if(is.na(likely_lat) | is.na(likely_lon)) stop("Latitude or longitude columns could not be identified! Are you sure you have any?")
+  if(is.na(likely_lat) | is.na(likely_lng)) stop("Latitude or longitude columns could not be identified! Are you sure you have any?")
 
   dat = dat |>
     dplyr::mutate(lat = !!rlang::sym(likely_lat),
-           lon = !!rlang::sym(likely_lon)) |>
+           lon = !!rlang::sym(likely_lng)) |>
     dplyr::mutate(lat = stringr::str_remove_all(lat, '^(\\.)?'),
            lon = stringr::str_remove_all(lon, '^(\\.)?')) |>
     dplyr::mutate(lat = stringr::str_remove_all(lat, '[A-Za-z]+')) |>

@@ -11,7 +11,7 @@
 clean_waterbody_names = function(dat, waterbody_column){
   # Some corrections to waterbody names.
   dat = dat |>
-    dplyr::rename(waterbody = !!sym(waterbody_column)) |>
+    dplyr::rename(waterbody = !!rlang::sym(waterbody_column)) |>
     dplyr::mutate(waterbody = stringr::str_squish(waterbody)) |>
     dplyr::mutate(waterbody = stringr::str_to_title(waterbody)) |>
     dplyr::mutate(waterbody = dplyr::case_when(

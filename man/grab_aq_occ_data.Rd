@@ -12,6 +12,7 @@ grab_aq_occ_data(
   excel_species_var = "Submitted_Common_Name",
   output_crs = 4326,
   quiet = F,
+  in_shiny = F,
   ...
 )
 }
@@ -29,6 +30,8 @@ grab_aq_occ_data(
 \item{output_crs}{Coordinate Reference System (i.e. projection system); defaults to 4326 (WGS 84), another common option for BC is 3005.}
 
 \item{quiet}{Boolean to determine amount of feedback given by function}
+
+\item{in_shiny}{Is this function being run in shiny? If so, give incremental progress updates.}
 
 \item{...}{Additional arguments}
 }

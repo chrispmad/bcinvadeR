@@ -12,6 +12,8 @@
 #' @param focus_wb_name Name of waterbody
 #' @param focus_wb_coordinates Coordinates within waterbody (long, lat)
 #' @param dist_from_wb_to_search Radius to search for streams/lakes, in kilometers
+#' @param in_shiny Is this function being run in shiny? If so, give incremental progress updates.
+
 #'
 #' @return sf object spatial table of downstream lakes
 #' @export

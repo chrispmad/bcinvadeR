@@ -8,6 +8,7 @@
 #' @param quiet Boolean to determine amount of feedback given by function
 #' @param ... Additional arguments
 #' @param sources Which layers to search for occurrence data; one or more of 'SPI','Old Aquatic','Incident Reports', and 'iNaturalist'
+#' @param in_shiny Is this function being run in shiny? If so, give incremental progress updates.
 #'
 #' @return Aquatic occurrence data in British Columbia; optional to add in one's own excel file from local machine.
 #' @export
@@ -26,6 +27,7 @@ grab_aq_occ_data = function(common_names = NULL,
                             excel_species_var = 'Submitted_Common_Name',
                             output_crs = 4326,
                             quiet = F,
+                            in_shiny = F,
                             ...){
   # Must specify common name or scientific name, as character string
   if(is.null(common_names)) stop("Enter the species' common name")
@@ -43,6 +45,8 @@ grab_aq_occ_data = function(common_names = NULL,
   if(quiet == F){
     cat("Looking for records in the Wildlife Species Inventory Incidental Observations layer on BC Warehouse...\n")
   }
+
+  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching SPI dataset')
 
   if('SPI' %in% sources){
     ## BCG Warehouse Data
@@ -68,6 +72,8 @@ grab_aq_occ_data = function(common_names = NULL,
 
     search_results = append(search_results, list(bcg_records))
   }
+
+  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching old Aquatic Invasives layer')
 
   if('Old Aquatic' %in% sources){
     if(quiet == F){
@@ -101,6 +107,8 @@ grab_aq_occ_data = function(common_names = NULL,
 
     search_results = append(search_results, list(old_ais))
   }
+
+  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching incident report excel file')
 
   if('Incident Reports' %in% sources){
     if(!is.null(excel_path) & !is.null(sheet_name) & !is.null(excel_species_var)){
@@ -179,6 +187,8 @@ grab_aq_occ_data = function(common_names = NULL,
     }
   }
 
+  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching iNaturalist')
+
   if('iNaturalist' %in% sources){
 
     if(quiet == F){
@@ -217,6 +227,8 @@ grab_aq_occ_data = function(common_names = NULL,
     search_results = append(search_results, list(inat))
   }
   ## Combine datasets
+
+  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Combining results...')
 
   dataset = search_results |>
     dplyr::bind_rows()

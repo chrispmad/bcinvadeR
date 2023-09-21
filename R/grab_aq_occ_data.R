@@ -48,7 +48,7 @@ grab_aq_occ_data = function(common_names = NULL,
     ## BCG Warehouse Data
     bcg_records = tryCatch(
       expr = bcdata::bcdc_query_geodata('aca81811-4b08-4382-9af7-204e0b9d2448') |>
-        dplyr::filter(SPECIES_NAME %in% common_names) |>
+        bcdata::filter(SPECIES_NAME %in% common_names) |>
         bcdata::collect() |>
         sf::st_transform(crs = output_crs) |>
         dplyr::select(Date = 'OBSERVATION_DATE', Species = 'SPECIES_NAME', Location = 'GAZETTED_NAME') |>
@@ -78,7 +78,7 @@ grab_aq_occ_data = function(common_names = NULL,
     old_ais = tryCatch(
       expr = suppressWarnings(
         bcdata::bcdc_query_geodata('d9613096-b2fe-43b4-9be1-d82a3b805082') |>
-          dplyr::filter(ENGLISH_NAME %in% common_names) |>
+          bcdata::filter(ENGLISH_NAME %in% common_names) |>
           bcdata::collect() |>
           sf::st_transform(crs = output_crs) |>
           dplyr::mutate(Species = stringr::str_to_title(ENGLISH_NAME)) |>

@@ -26,16 +26,17 @@ get_relevant_data = function(focus_wb_poly,
 
   # Get all lake/stream/river polygons within X kilometers, depending on the
   # options we wrote above.
-  nlakes = bcdc_query_geodata('freshwater-atlas-lakes') |>
-    filter(DWITHIN(focus_wb_poly, dist_from_wb_to_search, 'kilometers')) |> collect()
+  nlakes = bcdata::bcdc_query_geodata('freshwater-atlas-lakes') |>
+    bcdata::filter(bcdata::DWITHIN(focus_wb_poly, dist_from_wb_to_search, 'kilometers')) |>
+    bcdata::collect()
 
-  nstreams = bcdc_query_geodata('freshwater-atlas-stream-network') |>
-    filter(DWITHIN(focus_wb_poly, dist_from_wb_to_search, 'kilometers')) |>
-    collect()
+  nstreams = bcdata::bcdc_query_geodata('freshwater-atlas-stream-network') |>
+    bcdata::filter(bcdata::DWITHIN(focus_wb_poly, dist_from_wb_to_search, 'kilometers')) |>
+    bcdata::collect()
 
-  stream_flow_dir = bcdc_query_geodata('freshwater-atlas-stream-directions') |>
-    filter(DWITHIN(focus_wb_poly, dist_from_wb_to_search, 'kilometers')) |>
-    collect() |>
+  stream_flow_dir = bcdata::bcdc_query_geodata('freshwater-atlas-stream-directions') |>
+    bcdata::filter(bcdata::DWITHIN(focus_wb_poly, dist_from_wb_to_search, 'kilometers')) |>
+    bcdata::collect() |>
     dplyr::select(direction = DOWNSTREAM_DIRECTION)
 
   # Simplify columns.
@@ -60,24 +61,24 @@ get_relevant_data = function(focus_wb_poly,
 extend_flow_markers = function(stream_flow_dir, flow_line_length){
 
   dat_for_flow_lines = stream_flow_dir |>
-    mutate(direction_within_90 = direction %% 90) |>
-    mutate(og_x = st_coordinates(geometry)[,1],
-           og_y = st_coordinates(geometry)[,2]) |>
-    mutate(dir_rads = (direction * pi) / (180)) |>
-    mutate(x_add = flow_line_length*cos(dir_rads),
+    dplyr::mutate(direction_within_90 = direction %% 90) |>
+    dplyr::mutate(og_x = sf::st_coordinates(geometry)[,1],
+           og_y = sf::st_coordinates(geometry)[,2]) |>
+    dplyr::mutate(dir_rads = (direction * pi) / (180)) |>
+    dplyr::mutate(x_add = flow_line_length*cos(dir_rads),
            y_add = flow_line_length*sin(dir_rads)) |>
-    mutate(new_x = og_x + x_add,
+    dplyr::mutate(new_x = og_x + x_add,
            new_y = og_y + y_add) |>
-    st_drop_geometry() |>
-    mutate(flow_id = row_number()) |>
+    sf::st_drop_geometry() |>
+    dplyr::mutate(flow_id = dplyr::row_number()) |>
     dplyr::select(flow_id,direction,og_x,new_x,og_y,new_y)
 
-  tibble(
+  tidyr::tibble(
     flow_id = rep(dat_for_flow_lines$flow_id,2)
   ) |>
-    group_by(flow_id) |>
-    mutate(coord_id = paste0(flow_id,"-",row_number())) |>
-    left_join(dat_for_flow_lines |>
+    dplyr::group_by(flow_id) |>
+    dplyr::mutate(coord_id = paste0(flow_id,"-",dplyr::row_number())) |>
+    dplyr::left_join(dat_for_flow_lines |>
                 dplyr::select(flow_id,og_x,new_x) |>
                 pivot_longer(-flow_id,values_to = 'X') |>
                 dplyr::select(-name) |>
@@ -85,16 +86,16 @@ extend_flow_markers = function(stream_flow_dir, flow_line_length){
                 mutate(coord_id = paste0(flow_id,"-",row_number()))) |>
     left_join(dat_for_flow_lines |>
                 dplyr::select(flow_id,og_y,new_y) |>
-                pivot_longer(-flow_id,values_to = 'Y') |>
+                tidyr::pivot_longer(-flow_id,values_to = 'Y') |>
                 dplyr::select(-name) |>
-                group_by(flow_id) |>
-                mutate(coord_id = paste0(flow_id,"-",row_number()))) |>
-    ungroup() |>
-    st_as_sf(coords = c("X","Y"), crs = 3005) |>
-    arrange(flow_id, coord_id) |>
-    group_by(flow_id) |>
+                dplyr::group_by(flow_id) |>
+                dplyr::mutate(coord_id = paste0(flow_id,"-",dplyr::row_number()))) |>
+    dplyr::ungroup() |>
+    sf::st_as_sf(coords = c("X","Y"), crs = 3005) |>
+    dplyr::arrange(flow_id, coord_id) |>
+    dplyr::group_by(flow_id) |>
     dplyr::summarize(do_union=FALSE) |>
-    st_cast("LINESTRING", warn = F)
+    sf::st_cast("LINESTRING", warn = F)
 }
 
 
@@ -103,36 +104,36 @@ find_downstream_node_of_stream = function(stream, flow_lines){
 
   # browser()
 
-  stream_line_nodes = st_cast(sf::st_boundary(stream),'POINT',warn=F)
+  stream_line_nodes = sf::st_cast(sf::st_boundary(stream),'POINT',warn=F)
 
   the_flows = flow_lines |>
-    filter(st_intersects(geometry, stream, sparse = F))
+    dplyr::filter(sf::st_intersects(geometry, stream, sparse = F))
 
-  the_flows_as_points = st_cast(the_flows, 'POINT', warn = F) |>
-    group_by(flow_id) |>
-    mutate(start = row_number() == 1) |>
-    ungroup()
+  the_flows_as_points = sf::st_cast(the_flows, 'POINT', warn = F) |>
+    dplyr::group_by(flow_id) |>
+    dplyr::mutate(start = dplyr::row_number() == 1) |>
+    dplyr::ungroup()
 
   downstream_flow_marker_flow_id = the_flows_as_points |>
-    mutate(dist_to_stream = as.numeric(st_distance(geometry, stream))) |>
-    filter(dist_to_stream != 0) |>
-    arrange(desc(dist_to_stream)) |>
-    slice(1) |>
+    dplyr::mutate(dist_to_stream = as.numeric(sf::st_distance(geometry, stream))) |>
+    dplyr::filter(dist_to_stream != 0) |>
+    dplyr::arrange(desc(dist_to_stream)) |>
+    dplyr::slice(1) |>
     dplyr::pull(flow_id)
 
   the_flows_as_points = the_flows_as_points |>
-    mutate(downstream = flow_id == downstream_flow_marker_flow_id)
+    dplyr::mutate(downstream = flow_id == downstream_flow_marker_flow_id)
 
   downstream_flow_marker = the_flows_as_points |>
-    filter(downstream == TRUE, start == TRUE)
+    dplyr::filter(downstream == TRUE, start == TRUE)
 
   #Overlay the downstream flow line (specifically, the start node of that flow line)
   # with the node of the stream piece.
   stream_line_nodes = stream_line_nodes |>
-    mutate(downstream_node = st_intersects(geometry, downstream_flow_marker, sparse = F))
+    dplyr::mutate(downstream_node = sf::st_intersects(geometry, downstream_flow_marker, sparse = F))
 
   stream_line_nodes |>
-    filter(downstream_node)
+    dplyr::filter(downstream_node)
 }
 
 
@@ -147,13 +148,13 @@ contender_stream_downstream_from_graph = function(current_graph_seed, contender_
   # Look at the further flow marker. Does its downstream point lie closer
   # or further from our graph_seed? If closer, then drop this stream piece!
   farther_flow_marker_for_stream_to_add = flow_markers_for_stream_to_add |>
-    mutate(distance_from_graph = sf::st_distance(geometry, current_graph_seed)) |>
+    dplyr::mutate(distance_from_graph = sf::st_distance(geometry, current_graph_seed)) |>
     dplyr::arrange(desc(distance_from_graph)) |>
     dplyr::slice(1)
 
-  distance_twixt_flow_point_and_graph_seed = st_boundary(farther_flow_marker_for_stream_to_add) |>
+  distance_twixt_flow_point_and_graph_seed = sf::st_boundary(farther_flow_marker_for_stream_to_add) |>
     sf::st_cast("POINT", warn = F) |>
-    mutate(distance_from_graph =  as.numeric(sf::st_distance(geometry, current_graph_seed))) |>
+    dplyr::mutate(distance_from_graph = as.numeric(sf::st_distance(geometry, current_graph_seed))) |>
     dplyr::pull(distance_from_graph)
 
   # If the flow line is more or less pointing toward our graph_seed (i.e. the end of the
@@ -177,9 +178,9 @@ contender_stream_downstream_from_graph = function(current_graph_seed, contender_
 # Functions for stream joining loop below.
 downstream_setup = function(focus_wb){
   #Set up lakes / streams / flow marker pools to search in each loop.
-  lakes_pool <<- lakes |> filter(name != focus_wb | is.na(name))
+  lakes_pool <<- lakes |> dplyr::filter(name != focus_wb | is.na(name))
 
-  streams_pool <<- streams |> mutate(stream_number = row_number())
+  streams_pool <<- streams |> dplyr::mutate(stream_number = dplyr::row_number())
 
   flow_line_pool <<- flow_lines
 
@@ -187,13 +188,13 @@ downstream_setup = function(focus_wb){
 
   # Get stream pieces inside our focal wb
   graph_seed <<- streams_pool |>
-    filter(st_intersects(geometry, focus_wb_poly, sparse = F)) |>
-    slice(1) |>
-    mutate(name = 'graph')
+    dplyr::filter(sf::st_intersects(geometry, focus_wb_poly, sparse = F)) |>
+    dplyr::slice(1) |>
+    dplyr::mutate(name = 'graph')
 
   # Remove streams that are inside our focal wb from stream_pool
   streams_pool <<- streams_pool |>
-    filter(!stream_number %in% graph_seed$stream_number)
+    dplyr::filter(!stream_number %in% graph_seed$stream_number)
 }
 
 find_downstream_graph = function(focus_wb, max_iterations = 100, show_graph_growth = F) {
@@ -219,7 +220,7 @@ find_downstream_graph = function(focus_wb, max_iterations = 100, show_graph_grow
       if(consecutive_misses_for_downstream_point == 2) break
 
       stream_to_add = streams_pool |>
-        filter(st_intersects(geometry, overlap_of_graph_seed_and_downstream, sparse = F))
+        dplyr::filter(sf::st_intersects(geometry, overlap_of_graph_seed_and_downstream, sparse = F))
 
       # No such stream piece that's touching? This should indicate we've reached
       # the end of the line and there are no more contender stream pieces
@@ -232,7 +233,7 @@ find_downstream_graph = function(focus_wb, max_iterations = 100, show_graph_grow
 
       # Remember to remove this stream piece from the stream pool!
       streams_pool = streams_pool |>
-        filter(!st_intersects(geometry, overlap_of_graph_seed_and_downstream, sparse = F))
+        dplyr::filter(!sf::st_intersects(geometry, overlap_of_graph_seed_and_downstream, sparse = F))
 
       add_stream_assessment_results = list()
       for(z in 1:nrow(stream_to_add)){
@@ -243,9 +244,9 @@ find_downstream_graph = function(focus_wb, max_iterations = 100, show_graph_grow
       overlap_of_graph_seed_and_downstream = stream_to_add[unlist(add_stream_assessment_results),]
 
       graph_seed = graph_seed |>
-        bind_rows(overlap_of_graph_seed_and_downstream) |>
-        summarise(name = 'graph') |>
-        mutate(loop = i)
+        dplyr::bind_rows(overlap_of_graph_seed_and_downstream) |>
+        dplyr::summarise(name = 'graph') |>
+        dplyr::mutate(loop = i)
     } else {
 
       # We found a downstream point!
@@ -255,11 +256,11 @@ find_downstream_graph = function(focus_wb, max_iterations = 100, show_graph_grow
 
       # Remove flow line(s) that intersects with downstream point from flow line pool
       flow_line_pool = flow_line_pool |>
-        filter(!st_intersects(geometry, downstream_point, sparse = F))
+        dplyr::filter(!sf::st_intersects(geometry, downstream_point, sparse = F))
 
       # See which streams from the streams_pool overlap with our downstream point.
       overlap_of_graph_seed_and_downstream = streams_pool |>
-        filter(st_intersects(geometry, downstream_point, sparse = F))
+        dplyr::filter(sf::st_intersects(geometry, downstream_point, sparse = F))
       # If none do, supposedly we have tried matching all streams to all
       # downstream points and have removed all that flow into our graph seed...
       # Assuming this to be true, we can jump out of the loop here.
@@ -270,7 +271,7 @@ find_downstream_graph = function(focus_wb, max_iterations = 100, show_graph_grow
       if(nrow(overlap_of_graph_seed_and_downstream) >= 2){
         # Are there multiple overlapping sections, and at least one of them is
         # very short? If that's the case, skip the tests and merge both.
-        if(!(as.numeric(st_length(overlap_of_graph_seed_and_downstream))[1] <= 50 | (as.numeric(st_length(overlap_of_graph_seed_and_downstream))[1] <= 50))){
+        if(!(as.numeric(sf::st_length(overlap_of_graph_seed_and_downstream))[1] <= 50 | (as.numeric(sf::st_length(overlap_of_graph_seed_and_downstream))[1] <= 50))){
           # Otherwise! Check that these contender streams aren't flowing into our graph seed.
           add_stream_assessment_results = list()
           for(z in 1:nrow(overlap_of_graph_seed_and_downstream)){
@@ -281,18 +282,18 @@ find_downstream_graph = function(focus_wb, max_iterations = 100, show_graph_grow
 
           # The following line may no longer be necessary... but it also might be!
           overlap_of_graph_seed_and_downstream = overlap_of_graph_seed_and_downstream |>
-            summarise()
+            dplyr::summarise()
         }
       }
 
       # Remove stream that intersects with downstream point from stream pool
       streams_pool = streams_pool |>
-        filter(!st_intersects(geometry, downstream_point, sparse = F))
+        dplyr::filter(!sf::st_intersects(geometry, downstream_point, sparse = F))
 
       graph_seed = graph_seed |>
-        bind_rows(overlap_of_graph_seed_and_downstream) |>
-        summarise(name = 'graph') |>
-        mutate(loop = i)
+        dplyr::bind_rows(overlap_of_graph_seed_and_downstream) |>
+        dplyr::summarise(name = 'graph') |>
+        dplyr::mutate(loop = i)
     }
   }
   print(plot(graph_seed$geometry))

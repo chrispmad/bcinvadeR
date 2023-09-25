@@ -170,7 +170,7 @@ grab_terr_occ_data = function(common_names = NULL,
     cat(paste0(nrow(dataset), " rows after dropping duplicates"))
   }
 
-  beepr::beep(5)
+  #beepr::beep(5)
 
   return(dataset)
 

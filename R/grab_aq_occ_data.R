@@ -249,7 +249,7 @@ grab_aq_occ_data = function(common_names = NULL,
     cat(paste0(nrow(dataset), " rows after dropping duplicates\n"))
   }
 
-  if(!quiet) beepr::beep(5)
+  #if(!quiet) beepr::beep(5)
 
   return(dataset)
 }

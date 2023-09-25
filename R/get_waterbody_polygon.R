@@ -1,3 +1,12 @@
+#' Title Get the polygon for a waterbody
+#'
+#' @param focus_wb_name Name of waterbody
+#' @param focus_wb_coordinates Coordinates (long, lat) of waterbody
+#'
+#' @return A single-rowed spatial table (sf object)
+#' @export
+#'
+#' @examples /dontrun{}
 get_waterbody_polygon = function(focus_wb_name = NULL,
                                  focus_wb_coordinates = NULL){
 

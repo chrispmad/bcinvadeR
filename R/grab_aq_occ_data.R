@@ -192,7 +192,7 @@ grab_aq_occ_data = function(common_names = NULL,
   if('iNaturalist' %in% sources){
 
     if(quiet == F){
-      cat("Looking for records in the Master Incidence Report Records excel file...\n")
+      cat("Looking for records on iNaturalist for just BC...\n")
     }
 
     inat = tryCatch(

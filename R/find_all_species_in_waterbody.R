@@ -26,7 +26,6 @@ find_all_species_in_waterbody = function(wb,
                                          quiet = T,
                                          ...){
 
-  browser()
   # Initial CRS of wb.
   init_crs = stringr::str_extract(unlist(sf::st_crs(wb))[1],'^[A-Z0-9]+')
 

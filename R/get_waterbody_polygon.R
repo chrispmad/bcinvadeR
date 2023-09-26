@@ -10,6 +10,8 @@
 get_waterbody_polygon = function(focus_wb_name = NULL,
                                  focus_wb_coordinates = NULL){
 
+  focus_wb_coordinates = unname(sapply(focus_wb_coordinates, as.numeric))
+
   if(focus_wb_coordinates[1] == "" & focus_wb_coordinates[2] == "") focus_wb_coordinates = c(NULL,NULL)
 
   if(is.null(focus_wb_name) & is.null(focus_wb_coordinates)) stop("Please enter waterbody name or, preferably, coordinates.")

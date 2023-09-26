@@ -1,3 +1,20 @@
+#' Title Find all species occurrence records in a waterbody
+#'
+#' @param wb Waterbody in which to search
+#' @param in_shiny Is this being run in a 'shiny' environment?
+#' @param sources Which data sources should we look in? One or more of 'SPI','Old Aquatic','Incident Reports', and 'iNaturalist'
+#' @param exclude Which kinds of organisms should we exclude? Default is 'Fungi' and 'Plantae'
+#' @param excel_path Path (including excel file name) to master incident tracking sheet
+#' @param sheet_name Name of aquatic sheet in excel file
+#' @param excel_species_var Name of column with species common name in excel sheet
+#' @param output_crs Output coordinate reference system (e.g. WGS 84, i.e. lat/long)
+#' @param quiet Should this function run in a verbose fashion?
+#' @param ...
+#'
+#' @return A table of species occurrence data
+#' @export
+#'
+#' @examples \dontrun{}
 find_all_species_in_waterbody = function(wb,
                                          in_shiny = F,
                                          sources = c("SPI","Old Aquatic","Incident Reports","iNaturalist"),

@@ -3,6 +3,7 @@
 export(add_waterbody_area)
 export(clean_coords)
 export(clean_waterbody_names)
+export(find_all_species_in_waterbody)
 export(find_downstream_waterbodies)
 export(get_bcdc_risk_layer)
 export(get_connected_waterbodies)

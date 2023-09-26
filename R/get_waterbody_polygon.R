@@ -10,7 +10,7 @@
 get_waterbody_polygon = function(focus_wb_name = NULL,
                                  focus_wb_coordinates = NULL){
 
-  focus_wb_coordinates = unname(sapply(focus_wb_coordinates, as.numeric))
+  focus_wb_coordinates = c(unname(sapply(focus_wb_coordinates, as.numeric)))
 
   if(focus_wb_coordinates[1] == "" & focus_wb_coordinates[2] == "") focus_wb_coordinates = c(NULL,NULL)
 

@@ -29,31 +29,31 @@ pmodel = R6::R6Class(
 #'
 #' @examples \dontrun{}
     print = function(){
-      cat("\n********************************************************")
-      cat("\nThis object represents an initialized prioritization model.")
+      message("\n********************************************************")
+      message("\nThis object represents an initialized prioritization model.")
       if(is.null(self$occurrence_data) & is.null(self$geog_units) & length(self$risk_layers) == 0){
-        cat("\nTo begin, please use 'my_model_name'$add() function to add occurrence data, \ngeographic units, risk layers and \nrisk weights, then use 'my_model_name'$run() to estimate \nrisk of invasive species spread.")
+        message("\nTo begin, please use 'my_model_name'$add() function to add occurrence data, \ngeographic units, risk layers and \nrisk weights, then use 'my_model_name'$run() to estimate \nrisk of invasive species spread.")
       }
       if(!is.null(self$occurrence_data)){
-        cat(paste0("\nPrioritization Framework consists of ",nrow(self$occurrence_data),
+        message(paste0("\nPrioritization Framework consists of ",nrow(self$occurrence_data),
                    " rows of occurrence data."))
       }
       if(!is.null(self$geog_units)){
-        cat(paste0("\n\nThe geographic units being considered consist of ",nrow(self$geog_units),
+        message(paste0("\n\nThe geographic units being considered consist of ",nrow(self$geog_units),
                    " separate features. Project system: ",unname(unlist(sf::st_crs(self$geog_units[1,])[1]))
                    ))
       }
       if(length(self$risk_layers) > 0){
         if(length(self$risk_layers) != length(self$risk_weights)){
-          cat(paste0("\n\nRisk layers and weights not equal in length (",
+          message(paste0("\n\nRisk layers and weights not equal in length (",
                      length(self$risk_layers)," vs ",length(self$risk_weights),")"))
         } else {
-        cat(paste0("\n\nRisk layers (N = ",length(self$risk_layers),") consist of ",
+        message(paste0("\n\nRisk layers (N = ",length(self$risk_layers),") consist of ",
                    paste0(names(self$risk_layers), collapse = ', ')))
         }
       }
       if(is.null(self$risk_estimates)){
-        cat(paste0("\n\nRisk estimates have not yet been calculated. Use the 'run()' function to calculate them."))
+        message(paste0("\n\nRisk estimates have not yet been calculated. Use the 'run()' function to calculate them."))
       }
     },
 
@@ -113,12 +113,12 @@ pmodel = R6::R6Class(
       if(is.null(self$occurrence_data) | is.null(self$geog_units) | length(self$risk_layers) == 0) stop("Model is missing one or more of occurrence data, geographic units, or risk layers. \nPlease ensure these are present, then try again.")
       # Check that some ID column is supplied or identifiable from the geographic unit dataset.
       if(is.null(self$geog_id_col)){
-        if(!quiet) cat("\nNo column was provided as the ID column of the geographic units. Intuiting column now...")
+        if(!quiet) message("\nNo column was provided as the ID column of the geographic units. Intuiting column now...")
         if(sum(stringr::str_detect(names(self$geog_units), '(DISTRICT_NAME|REGION_NAME|GNIS_NA)')) == 0) {
           stop("No suitable ID column for geographic units could be automatically detected; please supply a column name.")
         } else {
           self$geog_id_col = names(self$geog_units)[stringr::str_detect(names(self$geog_units),'(DISTRICT_NAME|REGION_NAME|GNIS_NA)')][1]
-          if(!quiet) cat(paste0("\nLikely column that will be used from here onwards: ",self$geog_id_col))
+          if(!quiet) message(paste0("\nLikely column that will be used from here onwards: ",self$geog_id_col))
         }
       }
 

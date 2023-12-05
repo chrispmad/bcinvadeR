@@ -1,9 +1,13 @@
 bass = grab_aq_occ_data('smallmouth bass')
+
 geogs = get_waterbodies_in_area(area_type = 'regions',
                                 specific_areas = 'Thompson-Okanagan',
                                 size_threshold = 100)
+
 prox = get_bcdc_risk_layer(geogs, 'GNIS_NAME_1', 'prox_to_settlements')
+
 lake_size = geogs |> dplyr::select(GNIS_NAME_1, area_m2 = FEATURE_AREA_SQM) |> sf::st_drop_geometry()
+
 goldfish = grab_aq_occ_data('goldfish') |>
   dplyr::select(Species) |>
   dplyr::rename(goldfish = Species)

@@ -19,8 +19,8 @@
 #' quiet = F)
 get_connected_waterbodies = function(
     waterbody_name = NULL,
-    waterbody_polygon = NULL,
     waterbody_coordinates = NULL,
+    waterbody_polygon = NULL,
     waterbody_type = 'lake',
     search_radius = 10,
     quiet = T){
@@ -36,24 +36,26 @@ get_connected_waterbodies = function(
     if(!is.null(waterbody_name)){
       if(is.null(waterbody_coordinates)) stop("Due to shared waterbody names across BC, we need coordinates to specify which waterbody to focus on. \nPlease supply coordinates in this format: c(-120, 49)")
 
-      waterbody_coordinates = bcinvadeR::clean_coords(waterbody_coordinates)
+      # waterbody_coordinates = bcinvadeR::clean_coords(waterbody_coordinates)
 
-      # wb_ln = waterbody_coordinates[1]
-      # wb_lt = waterbody_coordinates[2]
-      wb_ln = waterbody_coordinates$lon
-      wb_lt = waterbody_coordinates$lat
+      wb_ln = waterbody_coordinates[1]
+      wb_lt = waterbody_coordinates[2]
+      # wb_ln = waterbody_coordinates$lon
+      # wb_lt = waterbody_coordinates$lat
 
 
-      # It would be nice to clean supplied coordinates here.
-      # E.g. wb_ln = clean_coords(wb_ln)
-      point_for_search = sf::st_as_sf(data.frame(ln = wb_ln, lt = wb_lt),
-                                      coords = c("ln","lt"),
-                                      crs = 4326) |>
-        sf::st_transform(3005)
-
-      wb = bcdata::bcdc_query_geodata('cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6') |>
-        bcdata::filter(bcdata::INTERSECTS(point_for_search)) |>
-        bcdata::collect()
+      # # It would be nice to clean supplied coordinates here.
+      # # E.g. wb_ln = clean_coords(wb_ln)
+      # point_for_search = sf::st_as_sf(data.frame(ln = wb_ln, lt = wb_lt),
+      #                                 coords = c("ln","lt"),
+      #                                 crs = 4326) |>
+      #   sf::st_transform(3005)
+      #
+      # wb = bcdata::bcdc_query_geodata('cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6') |>
+      #   bcdata::filter(bcdata::INTERSECTS(point_for_search)) |>
+      #   bcdata::collect()
+      wb = get_waterbody_polygon(waterbody_name,
+                                 c(wb_ln,wb_lt))
 
       if(nrow(wb) == 0) stop("Unfortunately, no lake was found with that name and coordinate combination...exiting.")
     }

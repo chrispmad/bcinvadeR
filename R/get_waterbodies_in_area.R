@@ -27,8 +27,9 @@ get_waterbodies_in_area <- function(area_type = c("regions","districts"),
   area_shapefile = get_natural_resource_area_shapefile(area_type = area_type,
                                       specific_areas = specific_areas)
 
+  browser()
   # permanent ID cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6 is for 'freshwater-atlas-lakes'
-    bcdata::bcdc_query_geodata('cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6') |>
+    bcdata::bcdc_query_geodata('freshwater-atlas-lakes') |>
       bcdata::filter(FEATURE_AREA_SQM >= size_threshold*1000000) |>
       bcdata::filter(bcdata::INTERSECTS(area_shapefile)) |>
       bcdata::collect() |>

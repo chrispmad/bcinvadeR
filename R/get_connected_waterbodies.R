@@ -27,92 +27,96 @@ get_connected_waterbodies = function(
     in_shiny = FALSE,
     quiet = T){
 
-  if(is.null(waterbody_name) & is.null(waterbody_polygon)) stop("Please enter a waterbody name or polygon")
+  # if(is.null(waterbody_name) & is.null(waterbody_polygon)) stop("Please enter a waterbody name or polygon")
+  function_logic = function(){
+    browser()
+      # Do we have a waterbody polygon to work with?
+      if(!is.null(waterbody_polygon)){
+        # We do not...
+        wb = waterbody_polygon
+        likely_name_column = names(wb |> dplyr::select(dplyr::where(~any(grepl('Lake', .)))))[1]
+        wb = wb |>
+          dplyr::rename(name := likely_name_column)
+        if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Renamed column in wb polygon file...')
+      } else {
+        # We do have a waterbody polygon to work with!
+        if(is.null(waterbody_coordinates)) stop("Due to shared waterbody names across BC, we need coordinates to specify which waterbody to focus on. \nPlease supply coordinates in this format: c(-120, 49)")
 
-  if(!is.null(waterbody_polygon)){
-    wb = waterbody_polygon
-    likely_name_column = names(wb |> dplyr::select(dplyr::where(~any(grepl('Lake', .)))))[1]
-    wb = wb |>
-      dplyr::rename(name := likely_name_column)
-    if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Renamed column in wb polygon file...')
-  } else {
-    if(!is.null(waterbody_name)){
-      if(is.null(waterbody_coordinates)) stop("Due to shared waterbody names across BC, we need coordinates to specify which waterbody to focus on. \nPlease supply coordinates in this format: c(-120, 49)")
+        if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Getting wb polygon...')
 
-      if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Getting wb polygon...')
+        # waterbody_coordinates = bcinvadeR::clean_coords(waterbody_coordinates)
 
-      # waterbody_coordinates = bcinvadeR::clean_coords(waterbody_coordinates)
+        wb_ln = waterbody_coordinates[1]
+        wb_lt = waterbody_coordinates[2]
 
-      wb_ln = waterbody_coordinates[1]
-      wb_lt = waterbody_coordinates[2]
-      # wb_ln = waterbody_coordinates$lon
-      # wb_lt = waterbody_coordinates$lat
+        wb = get_waterbody_polygon(waterbody_name,
+                                   c(wb_ln,wb_lt))
 
+        if(nrow(wb) == 0) stop("Unfortunately, no lake was found with that name and coordinate combination...exiting.")
 
-      # # It would be nice to clean supplied coordinates here.
-      # # E.g. wb_ln = clean_coords(wb_ln)
-      # point_for_search = sf::st_as_sf(data.frame(ln = wb_ln, lt = wb_lt),
-      #                                 coords = c("ln","lt"),
-      #                                 crs = 4326) |>
-      #   sf::st_transform(3005)
-      #
-      # wb = bcdata::bcdc_query_geodata('cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6') |>
-      #   bcdata::filter(bcdata::INTERSECTS(point_for_search)) |>
-      #   bcdata::collect()
-      wb = get_waterbody_polygon(waterbody_name,
-                                 c(wb_ln,wb_lt))
+      }
+    if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Getting nearby lakes...')
+    if(!quiet) cat(paste0("\nGathering nearby lakes...",Sys.time(),"\n"))
+    nearby_lakes = bcdata::bcdc_query_geodata('cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6') |>
+      bcdata::filter(bcdata::DWITHIN(wb, distance = search_radius, units = 'kilometers')) |>
+      bcdata::collect() |>
+      dplyr::mutate(polytype = 'lakes') |>
+      dplyr::select(WATERBODY_POLY_ID,WATERSHED_GROUP_ID,GNIS_NAME = GNIS_NAME_1,polytype)
+    if(!quiet) cat(paste0("\nFinished at ",Sys.time(),"\n"))
 
-      if(nrow(wb) == 0) stop("Unfortunately, no lake was found with that name and coordinate combination...exiting.")
-    }
+    if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Getting nearby streams/rivers...')
+
+    if(!quiet) cat("\nGathering nearby streams/rivers...\n")
+    nearby_streams = bcdata::bcdc_query_geodata('freshwater-atlas-stream-network') |>
+      bcdata::filter(bcdata::DWITHIN(wb, distance = search_radius, units = 'kilometers')) |>
+      bcdata::collect() |>
+      dplyr::mutate(polytype = 'stream') |>
+      dplyr::select(LINEAR_FEATURE_ID,WATERSHED_GROUP_ID,GNIS_NAME,polytype)
+    if(!quiet) cat(paste0("\nFinished at ",Sys.time(),"\n"))
+
+    # Buffer streams by 5 meters.
+    nearby_streams = sf::st_buffer(nearby_streams, 5)
+
+    if(!quiet) cat("\nCombining lakes/rivers/streams, finding connected networks...\n")
+
+    # Combine lakes with streams.
+    wbs = nearby_lakes |>
+      dplyr::select(name = GNIS_NAME, polytype) |>
+      dplyr::bind_rows(nearby_streams |>
+                         dplyr::select(name = GNIS_NAME, polytype)
+      )
+    # Find network.
+
+    if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Finding network...')
+
+    parts = sf::st_cast(wbs |> dplyr::summarise(),"POLYGON")
+
+    clust = unlist(sf::st_intersects(wbs, parts))
+
+    wbs$graph_id = clust
+
+    if(!quiet) cat(paste0("\nFinished finding networks - ",Sys.time(),"\n"))
+
+    if(is.null(waterbody_name)) {waterbody_name = wb$GNIS_NAME_1}
+
+    target_graph = wbs |> dplyr::filter(name == waterbody_name) |> dplyr::pull(graph_id)
+
+    if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Returning network!')
+
+    wbs = wbs |>
+      dplyr::filter(graph_id == target_graph)
+
+    return(wbs)
   }
-  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Getting nearby lakes...')
-  if(!quiet) cat(paste0("\nGathering nearby lakes...",Sys.time(),"\n"))
-  nearby_lakes = bcdata::bcdc_query_geodata('cb1e3aba-d3fe-4de1-a2d4-b8b6650fb1f6') |>
-    bcdata::filter(bcdata::DWITHIN(wb, distance = search_radius, units = 'kilometers')) |>
-    bcdata::collect() |>
-    dplyr::mutate(polytype = 'lakes') |>
-    dplyr::select(WATERBODY_POLY_ID,WATERSHED_GROUP_ID,GNIS_NAME = GNIS_NAME_1,polytype)
-  if(!quiet) cat(paste0("\nFinished at ",Sys.time(),"\n"))
 
-  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Getting nearby streams/rivers...')
-
-  if(!quiet) cat("\nGathering nearby streams/rivers...\n")
-  nearby_streams = bcdata::bcdc_query_geodata('freshwater-atlas-stream-network') |>
-    bcdata::filter(bcdata::DWITHIN(wb, distance = search_radius, units = 'kilometers')) |>
-    bcdata::collect() |>
-    dplyr::mutate(polytype = 'stream') |>
-    dplyr::select(LINEAR_FEATURE_ID,WATERSHED_GROUP_ID,GNIS_NAME,polytype)
-  if(!quiet) cat(paste0("\nFinished at ",Sys.time(),"\n"))
-
-  # Buffer streams by 5 meters.
-  nearby_streams = sf::st_buffer(nearby_streams, 5)
-
-  if(!quiet) cat("\nCombining lakes/rivers/streams, finding connected networks...\n")
-
-  # Combine lakes with streams.
-  wbs = nearby_lakes |>
-    dplyr::select(name = GNIS_NAME, polytype) |>
-    dplyr::bind_rows(nearby_streams |>
-                       dplyr::select(name = GNIS_NAME, polytype)
+  if(in_shiny){
+    wbs = shiny::withProgress(
+      message = 'Finding Connected Waterbodies',
+      session = session,
+      expr = function_logic()
     )
-  # Find network.
-
-  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Finding network...')
-
-  parts = sf::st_cast(wbs |> dplyr::summarise(),"POLYGON")
-
-  clust = unlist(sf::st_intersects(wbs, parts))
-
-  wbs$graph_id = clust
-
-  if(!quiet) cat(paste0("\nFinished finding networks - ",Sys.time(),"\n"))
-
-  target_graph = wbs |> dplyr::filter(name == waterbody_name) |> dplyr::pull(graph_id)
-
-  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Returning network!')
-
-  wbs = wbs |>
-    dplyr::filter(graph_id == target_graph)
-
+  } else {
+    wbs = function_logic()
+  }
   wbs
 }

@@ -78,18 +78,20 @@ extend_flow_markers = function(stream_flow_dir, flow_line_length){
   ) |>
     dplyr::group_by(flow_id) |>
     dplyr::mutate(coord_id = paste0(flow_id,"-",dplyr::row_number())) |>
-    dplyr::left_join(dat_for_flow_lines |>
-                dplyr::select(flow_id,og_x,new_x) |>
-                pivot_longer(-flow_id,values_to = 'X') |>
-                dplyr::select(-name) |>
-                group_by(flow_id) |>
-                mutate(coord_id = paste0(flow_id,"-",row_number()))) |>
-    left_join(dat_for_flow_lines |>
-                dplyr::select(flow_id,og_y,new_y) |>
-                tidyr::pivot_longer(-flow_id,values_to = 'Y') |>
-                dplyr::select(-name) |>
-                dplyr::group_by(flow_id) |>
-                dplyr::mutate(coord_id = paste0(flow_id,"-",dplyr::row_number()))) |>
+    dplyr::left_join(
+      dat_for_flow_lines |>
+        dplyr::select(flow_id,og_x,new_x) |>
+        tidyr::pivot_longer(-flow_id,values_to = 'X') |>
+        dplyr::select(-name) |>
+        dplyr::group_by(flow_id) |>
+        dplyr::mutate(coord_id = paste0(flow_id,"-",dplyr::row_number()))) |>
+    dplyr::left_join(
+      dat_for_flow_lines |>
+        dplyr::select(flow_id,og_y,new_y) |>
+        tidyr::pivot_longer(-flow_id,values_to = 'Y') |>
+        dplyr::select(-name) |>
+        dplyr::group_by(flow_id) |>
+        dplyr::mutate(coord_id = paste0(flow_id,"-",dplyr::row_number()))) |>
     dplyr::ungroup() |>
     sf::st_as_sf(coords = c("X","Y"), crs = 3005) |>
     dplyr::arrange(flow_id, coord_id) |>
@@ -102,7 +104,7 @@ extend_flow_markers = function(stream_flow_dir, flow_line_length){
 # Find the downstream node of a stream's two end nodes.
 find_downstream_node_of_stream = function(stream, flow_lines){
 
-  # browser()
+  browser()
 
   stream_line_nodes = sf::st_cast(sf::st_boundary(stream),'POINT',warn=F)
 
@@ -110,6 +112,7 @@ find_downstream_node_of_stream = function(stream, flow_lines){
     dplyr::filter(sf::st_intersects(geometry, stream, sparse = F))
 
   the_flows_as_points = sf::st_cast(the_flows, 'POINT', warn = F) |>
+    dplyr::mutate(flow_id = dplyr::row_number()) |>
     dplyr::group_by(flow_id) |>
     dplyr::mutate(start = dplyr::row_number() == 1) |>
     dplyr::ungroup()
@@ -176,7 +179,11 @@ contender_stream_downstream_from_graph = function(current_graph_seed, contender_
 }
 
 # Functions for stream joining loop below.
-downstream_setup = function(focus_wb){
+downstream_setup = function(focus_wb,
+                            focus_wb_poly,
+                            lakes,
+                            streams,
+                            flow_lines){
   #Set up lakes / streams / flow marker pools to search in each loop.
   lakes_pool <<- lakes |> dplyr::filter(name != focus_wb | is.na(name))
 
@@ -197,10 +204,21 @@ downstream_setup = function(focus_wb){
     dplyr::filter(!stream_number %in% graph_seed$stream_number)
 }
 
-find_downstream_graph = function(focus_wb, max_iterations = 100, show_graph_growth = F) {
+find_downstream_graph = function(focus_wb,
+                                 focus_wb_poly,
+                                 lakes,
+                                 streams,
+                                 flow_markers,
+                                 max_iterations = 100,
+                                 show_graph_growth = F) {
+
   for(i in 1:max_iterations){
 
-    if(i == 1) downstream_setup(focus_wb)
+    if(i == 1) downstream_setup(focus_wb,
+                                focus_wb_poly,
+                                lakes,
+                                streams,
+                                flow_markers)
 
     if(show_graph_growth) {
       print(plot(graph_seed$geometry))

@@ -10,6 +10,7 @@
 #' @param search_radius How far from the waterbody to search (in kilometers)
 #' @param quiet Should this function return copious updates as it runs?
 #' @param in_shiny Is this being run in a 'shiny' environment?
+#' @param the_session What is the shiny session?
 #'
 #' @return A spatial table (sf object) of all lakes, streams and rivers that intersect with your chosen waterbody
 #' @export
@@ -25,11 +26,11 @@ get_connected_waterbodies = function(
     waterbody_type = 'lake',
     search_radius = 10,
     in_shiny = FALSE,
+    the_session = session,
     quiet = T){
 
   # if(is.null(waterbody_name) & is.null(waterbody_polygon)) stop("Please enter a waterbody name or polygon")
   function_logic = function(){
-    browser()
       # Do we have a waterbody polygon to work with?
       if(!is.null(waterbody_polygon)){
         # We do not...
@@ -112,7 +113,7 @@ get_connected_waterbodies = function(
   if(in_shiny){
     wbs = shiny::withProgress(
       message = 'Finding Connected Waterbodies',
-      session = session,
+      session = the_session,
       expr = function_logic()
     )
   } else {

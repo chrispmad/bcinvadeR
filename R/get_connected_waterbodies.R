@@ -33,14 +33,14 @@ get_connected_waterbodies = function(
   function_logic = function(){
       # Do we have a waterbody polygon to work with?
       if(!is.null(waterbody_polygon)){
-        # We do not...
+        # We do...
         wb = waterbody_polygon
         likely_name_column = names(wb |> dplyr::select(dplyr::where(~any(grepl('Lake', .)))))[1]
         wb = wb |>
           dplyr::rename(name := likely_name_column)
         if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Renamed column in wb polygon file...')
       } else {
-        # We do have a waterbody polygon to work with!
+        # We do not have a waterbody polygon to work with!
         if(is.null(waterbody_coordinates)) stop("Due to shared waterbody names across BC, we need coordinates to specify which waterbody to focus on. \nPlease supply coordinates in this format: c(-120, 49)")
 
         if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Getting wb polygon...')

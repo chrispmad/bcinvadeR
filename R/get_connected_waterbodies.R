@@ -43,7 +43,7 @@ get_connected_waterbodies = function(
         # We do not have a waterbody polygon to work with!
         if(is.null(waterbody_coordinates)) stop("Due to shared waterbody names across BC, we need coordinates to specify which waterbody to focus on. \nPlease supply coordinates in this format: c(-120, 49)")
 
-        if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Getting wb polygon...')
+        if(in_shiny) shiny::incProgress(amount = 1/5, detail = 'Getting waterbody polygon...')
 
         # waterbody_coordinates = bcinvadeR::clean_coords(waterbody_coordinates)
 

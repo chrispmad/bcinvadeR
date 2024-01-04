@@ -24,7 +24,7 @@
 grab_terr_occ_data = function(common_names = NULL,
                               scientific_name = NULL,
                               excel_path = '5_Incidental Observations/Master Incidence Report Records.xlsx',
-                              sheet_name = 'Aquatic Reports',
+                              sheet_name = 'Terrestrial Reports',
                               excel_species_var = 'Common_Name',
                               output_crs = 4326,
                               quiet = F,
@@ -33,7 +33,7 @@ grab_terr_occ_data = function(common_names = NULL,
   if(is.null(common_names)) stop("Enter the species' common name")
   if(!is.character(common_names)) stop("Species name must be a character string")
 
-
+  # browser()
   # expand common names to all kinds of CaPiTaLiZaTiOn.
   common_names = c(stringr::str_to_lower(common_names),
                    stringr::str_to_sentence(common_names),

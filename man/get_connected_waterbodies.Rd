@@ -6,23 +6,29 @@
 \usage{
 get_connected_waterbodies(
   waterbody_name = NULL,
-  waterbody_polygon = NULL,
   waterbody_coordinates = NULL,
+  waterbody_polygon = NULL,
   waterbody_type = "lake",
   search_radius = 10,
+  in_shiny = FALSE,
+  the_session = session,
   quiet = T
 )
 }
 \arguments{
 \item{waterbody_name}{Name of the waterbody on which to base a connected network of waterbodies}
 
-\item{waterbody_polygon}{(Optional) Polygon of your chosen waterbody; include if you have one!}
-
 \item{waterbody_coordinates}{(Required unless polygon included) vector of WGS 84 coordinates, in format: c(longitude, latitude)}
+
+\item{waterbody_polygon}{(Optional) Polygon of your chosen waterbody; include if you have one!}
 
 \item{waterbody_type}{For now, only lakes are implemented}
 
 \item{search_radius}{How far from the waterbody to search (in kilometers)}
+
+\item{in_shiny}{Is this being run in a 'shiny' environment?}
+
+\item{the_session}{What is the shiny session?}
 
 \item{quiet}{Should this function return copious updates as it runs?}
 }

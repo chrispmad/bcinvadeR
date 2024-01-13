@@ -124,6 +124,11 @@ pmodel = R6::R6Class(
 
       # # Find the likely species name based on input data.
       # species_name = intuit_species_name(species_name, species_occurrence_data, quiet)
+browser()
+      # Make sure projection systems are the same. Base on geographic units.
+      if(sf::st_crs(self$geog_units) != sf::st_crs(self$occurrence_data)){
+        self$occurrence_data = sf::st_transform(self$occurrence_data, sf::st_crs(self$geog_units))
+      }
 
       # Summarize species occurrence data to spatial object.
       species_occurrence_data = sum_spatial_data_to_geog_units(self$occurrence_data,

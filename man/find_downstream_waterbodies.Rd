@@ -5,20 +5,23 @@
 \title{Title Find the downstream waterbodies}
 \usage{
 find_downstream_waterbodies(
-  focus_wb_name = NULL,
-  focus_wb_coordinates = NULL,
+  waterbody_name = NULL,
+  waterbody_coordinates = NULL,
   dist_from_wb_to_search = 10,
-  in_shiny = F
+  in_shiny = F,
+  the_session = session
 )
 }
 \arguments{
-\item{focus_wb_name}{Name of waterbody}
+\item{waterbody_name}{Name of waterbody}
 
-\item{focus_wb_coordinates}{Coordinates within waterbody (long, lat)}
+\item{waterbody_coordinates}{Coordinates within waterbody (long, lat)}
 
 \item{dist_from_wb_to_search}{Radius to search for streams/lakes, in kilometers}
 
 \item{in_shiny}{Is this function being run in shiny? If so, give incremental progress updates.}
+
+\item{the_session}{The shiny session}
 }
 \value{
 sf object spatial table of downstream lakes

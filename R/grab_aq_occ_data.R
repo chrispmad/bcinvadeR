@@ -9,6 +9,7 @@
 #' @param ... Additional arguments
 #' @param sources Which layers to search for occurrence data; one or more of 'SPI','Old Aquatic','Incident Reports', and 'iNaturalist'
 #' @param in_shiny Is this function being run in shiny? If so, give incremental progress updates.
+#' @param remove_no_coord_rows Should rows from our excel tracking sheet be dropped if they are lacking lat/lon coordinates?
 #'
 #' @return Aquatic occurrence data in British Columbia; optional to add in one's own excel file from local machine.
 #' @export
@@ -28,6 +29,7 @@ grab_aq_occ_data = function(common_names = NULL,
                             output_crs = 4326,
                             quiet = F,
                             in_shiny = F,
+                            remove_no_coord_rows = F,
                             ...){
   # Must specify common name or scientific name, as character string
   if(is.null(common_names)) stop("Enter the species' common name")
@@ -49,10 +51,19 @@ grab_aq_occ_data = function(common_names = NULL,
   if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching SPI dataset')
 
   if('SPI' %in% sources){
+
+    # cql_query = paste0("SPECIES_NAME like ",common_names,"%")
+
+    common_names_title = common_names[3]
+
+    cql_query = paste0("SPECIES_NAME LIKE '% ",common_names_title,"' or SPECIES_NAME LIKE '% ",common_names_title," %'")
+
     ## BCG Warehouse Data
     bcg_records = tryCatch(
       expr = bcdata::bcdc_query_geodata('aca81811-4b08-4382-9af7-204e0b9d2448') |>
-        bcdata::filter(SPECIES_NAME %in% common_names) |>
+        # bcdata::filter(SPECIES_NAME %in% common_names) |>
+        bcdata::filter(bcdata:::CQL(cql_query)) |>
+        # bcdata::filter(bcdata:::CQL("SPECIES_NAME LIKE '% shad' OR SPECIES_NAME LIKE '% shad %'")) |>
         bcdata::collect() |>
         sf::st_transform(crs = output_crs) |>
         dplyr::select(Date = 'OBSERVATION_DATE', Species = 'SPECIES_NAME', Location = 'GAZETTED_NAME') |>
@@ -81,10 +92,13 @@ grab_aq_occ_data = function(common_names = NULL,
     }
 
     # Look in the old AIS layer
+    cql_query = paste0("ENGLISH_NAME LIKE '% ",common_names_title,"' or ENGLISH_NAME LIKE '% ",common_names_title," %'")
+
     old_ais = tryCatch(
       expr = suppressWarnings(
         bcdata::bcdc_query_geodata('d9613096-b2fe-43b4-9be1-d82a3b805082') |>
-          bcdata::filter(ENGLISH_NAME %in% common_names) |>
+          # bcdata::filter(ENGLISH_NAME %in% common_names) |>
+          bcdata::filter(bcdata:::CQL(cql_query)) |>
           bcdata::collect() |>
           sf::st_transform(crs = output_crs) |>
           dplyr::mutate(Species = stringr::str_to_title(ENGLISH_NAME)) |>
@@ -127,7 +141,8 @@ grab_aq_occ_data = function(common_names = NULL,
           excel_dat = readxl::read_excel(path = excel_path,
                                          sheet = sheet_name) |>
             dplyr::rename(Species = excel_species_var) |>
-            dplyr::filter(Species %in% common_names) |>
+            dplyr::mutate(Species = stringr::str_to_title(Species)) |>
+            dplyr::filter(stringr::str_detect(Species,paste0("(",paste0(common_names,collapse = '|'),")"))) |>
             dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude)
 
           initial_nrow_inc = nrow(excel_dat)
@@ -140,9 +155,23 @@ grab_aq_occ_data = function(common_names = NULL,
               dplyr::mutate(stringr::str_extract(Date, '[0-9]{4}-[0-9]{2}-[0-9]{2}')) |>
               dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude) |>
               dplyr::mutate(DataSource = 'Incidental Observation') |>
-              dplyr::select(DataSource, dplyr::everything()) |>
-              dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+              dplyr::select(DataSource, dplyr::everything()) #|>
+              # dplyr::filter(!is.na(Latitude),!is.na(Longitude))
           )
+
+          if(remove_no_coord_rows){
+            inc = inc |>
+              dplyr::filter(!is.na(Latitude),!is.na(Longitude))
+          } else {
+
+            if(nrow(inc[is.na(inc$Latitude),]) > 0){
+              cat(paste0(nrow(inc[is.na(inc$Latitude),])," records lacked coordinate data; artificially set their coordinates to 0,0\n"))
+            }
+
+            inc = inc |>
+              dplyr::mutate(Latitude = tidyr::replace_na(Latitude, 0),
+                            Longitude = tidyr::replace_na(Longitude, 0))
+          }
 
           if(quiet == F){
             if(nrow(inc) == 0 & initial_nrow_inc > 0){
@@ -219,6 +248,9 @@ grab_aq_occ_data = function(common_names = NULL,
     if(quiet == F){
       if(!is.null(inat)){
         cat(paste0(nrow(inat)," records...\n"))
+        if(nrow(inat) == 0){
+          cat("Please note that the common name must match iNaturalist's spelling conventions exactly...\n")
+        }
       } else {
         cat("No records here!\n")
       }

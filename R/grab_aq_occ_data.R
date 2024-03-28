@@ -56,7 +56,7 @@ grab_aq_occ_data = function(common_names = NULL,
 
     common_names_title = common_names[3]
 
-    cql_query = paste0("SPECIES_NAME LIKE '% ",common_names_title,"' or SPECIES_NAME LIKE '% ",common_names_title," %'")
+    cql_query = paste0("SPECIES_NAME LIKE '",common_names_title,"' or SPECIES_NAME LIKE '% ",common_names_title,"' or SPECIES_NAME LIKE '% ",common_names_title," %'")
 
     ## BCG Warehouse Data
     bcg_records = tryCatch(
@@ -92,7 +92,7 @@ grab_aq_occ_data = function(common_names = NULL,
     }
 
     # Look in the old AIS layer
-    cql_query = paste0("ENGLISH_NAME LIKE '% ",common_names_title,"' or ENGLISH_NAME LIKE '% ",common_names_title," %'")
+    cql_query = paste0("ENGLISH_NAME LIKE '",common_names_title,"'  or ENGLISH_NAME LIKE '% ",common_names_title,"' or ENGLISH_NAME LIKE '% ",common_names_title," %'")
 
     old_ais = tryCatch(
       expr = suppressWarnings(

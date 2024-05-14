@@ -143,7 +143,10 @@ grab_aq_occ_data = function(common_names = NULL,
             dplyr::rename(Species = excel_species_var) |>
             dplyr::mutate(Species = stringr::str_to_title(Species)) |>
             dplyr::filter(stringr::str_detect(Species,paste0("(",paste0(common_names,collapse = '|'),")"))) |>
-            dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude)
+            dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude,ID_Confirmation)
+
+          # Remove unconfirmed reports!
+          excel_dat = excel_dat[excel_dat$ID_Confirmation == 'Confirmed',]
 
           initial_nrow_inc = nrow(excel_dat)
 

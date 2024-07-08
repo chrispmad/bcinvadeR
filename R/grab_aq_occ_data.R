@@ -50,13 +50,13 @@ grab_aq_occ_data = function(common_names = NULL,
 
   if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching SPI dataset')
 
+  common_names_title = common_names
+
   if('SPI' %in% sources){
 
     # cql_query = paste0("SPECIES_NAME like ",common_names,"%")
 
-    common_names_title = common_names[3]
-
-    cql_query = paste0("SPECIES_NAME LIKE '",common_names_title,"' or SPECIES_NAME LIKE '% ",common_names_title,"' or SPECIES_NAME LIKE '% ",common_names_title," %'")
+    cql_query = stringr::str_squish(paste0('SPECIES_NAME LIKE ',paste0("'",common_names_title,"'", collapse = ' or SPECIES_NAME LIKE ')))
 
     ## BCG Warehouse Data
     bcg_records = tryCatch(
@@ -92,7 +92,8 @@ grab_aq_occ_data = function(common_names = NULL,
     }
 
     # Look in the old AIS layer
-    cql_query = paste0("ENGLISH_NAME LIKE '",common_names_title,"'  or ENGLISH_NAME LIKE '% ",common_names_title,"' or ENGLISH_NAME LIKE '% ",common_names_title," %'")
+    # cql_query = paste0("ENGLISH_NAME LIKE '",common_names_title,"'  or ENGLISH_NAME LIKE '% ",common_names_title,"' or ENGLISH_NAME LIKE '% ",common_names_title," %'")
+    cql_query = stringr::str_squish(paste0('ENGLISH_NAME LIKE ',paste0("'",common_names_title,"'", collapse = ' or ENGLISH_NAME LIKE ')))
 
     old_ais = tryCatch(
       expr = suppressWarnings(

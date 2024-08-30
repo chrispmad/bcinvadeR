@@ -18,7 +18,7 @@
 find_all_species_in_waterbody = function(wb,
                                          in_shiny = F,
                                          sources = c("SPI","Old Aquatic","Incident Reports","iNaturalist"),
-                                         exclude = c('Fungi','Plantae'),
+                                         taxa_to_include = c('Actinopterygii','Mollusca','Fish'),
                                          excel_path = '5_Incidental Observations/Master Incidence Report Records.xlsx',
                                          sheet_name = 'Aquatic Reports',
                                          excel_species_var = 'Submitted_Common_Name',
@@ -83,6 +83,7 @@ find_all_species_in_waterbody = function(wb,
           sf::st_transform(crs = output_crs) |>
           dplyr::mutate(Species = stringr::str_to_title(ENGLISH_NAME)) |>
           dplyr::mutate(Location = ifelse(is.na(BCGNIS_NAME),LOCATION_INFORMATION,stringr::str_to_title(BCGNIS_NAME))) |>
+          dplyr::filter(TAXONOMIC_GROUP %in% taxa_to_include) |>
           dplyr::select(Species, Date = COLLECTION_DATE, Location) |>
           dplyr::mutate(Date = as.character(Date)) |>
           dplyr::mutate(DataSource = 'Old BCG AIS layer') |>
@@ -217,15 +218,16 @@ find_all_species_in_waterbody = function(wb,
       error = function(e) NULL
     )
 
-    if('Fungi' %in% exclude){
-      inat = inat |>
-        dplyr::filter(iconic_taxon_name != 'Fungi')
-    }
-    if('Plantae' %in% exclude){
-      inat = inat |>
-        dplyr::filter(iconic_taxon_name != 'Plantae')
-    }
+    # if('Fungi' %in% exclude){
+    #   inat = inat |>
+    #     dplyr::filter(iconic_taxon_name != 'Fungi')
+    # }
+    # if('Plantae' %in% exclude){
+    #   inat = inat |>
+    #     dplyr::filter(iconic_taxon_name != 'Plantae')
+    # }
     inat = inat |>
+      dplyr::filter(iconic_taxon_name %in% taxa_to_include) |>
       dplyr::select(-iconic_taxon_name)
 
     if(quiet == F){

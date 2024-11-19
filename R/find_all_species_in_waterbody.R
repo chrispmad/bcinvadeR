@@ -83,7 +83,7 @@ find_all_species_in_waterbody = function(wb,
           sf::st_transform(crs = output_crs) |>
           dplyr::mutate(Species = stringr::str_to_title(ENGLISH_NAME)) |>
           dplyr::mutate(Location = ifelse(is.na(BCGNIS_NAME),LOCATION_INFORMATION,stringr::str_to_title(BCGNIS_NAME))) |>
-          dplyr::filter(TAXONOMIC_GROUP %in% taxa_to_include) |>
+          dplyr::filter(TAXONOMIC_GROUP %in% dplyr::any_of(taxa_to_include)) |>
           dplyr::select(Species, Date = COLLECTION_DATE, Location) |>
           dplyr::mutate(Date = as.character(Date)) |>
           dplyr::mutate(DataSource = 'Old BCG AIS layer') |>

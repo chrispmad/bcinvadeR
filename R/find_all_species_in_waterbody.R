@@ -197,12 +197,73 @@ find_all_species_in_waterbody = function(wb,
       as.data.frame() |>
       dplyr::slice(2,1,4,3)
 
+    # inat = tryCatch(
+    #   expr = suppressWarnings(
+    #     # Cycle through taxa to search, binding rows.
+    #     rinat_data = purrr::map(taxa_to_include){
+    #       tryCatch(
+    #         expr = rinat::get_inat_obs(
+    #           #place_id = '7085',
+    #           # bounds = bounds_wgs_84$V1,
+    #           query = paste0(wb$Waterbody),
+    #           quality = 'research',
+    #           maxresults = 10000
+    #         ),
+    #         error = function(e) NULL
+    #       )}
+    #      |> dplyr::bind_rows()
+    #     # rinat::get_inat_obs(
+    #     #   #place_id = '7085',
+    #     #   # bounds = bounds_wgs_84$V1,
+    #     #   query = paste0(wb$Waterbody),
+    #     #   quality = 'research',
+    #     #   maxresults = 10000
+    #     # )
+    #     rinat_data |>
+    #       dplyr::summarise(DataSource = 'iNaturalist',
+    #                        Date = stringr::str_extract(observed_on_string, '[0-9]{4}-[0-9]{2}-[0-9]{2}'),
+    #                        Species = common_name,
+    #                        iNat_user = user_login,
+    #                        iNat_report_id = id,
+    #                        Location = place_guess,
+    #                        iconic_taxon_name,
+    #                        latitude,
+    #                        longitude) |>
+    #       sf::st_as_sf(coords = c('longitude','latitude'),
+    #                    crs = 4326)
+    #   ),
+    #   error = function(e) NULL
+    # )
+
+    # if('Fungi' %in% exclude){
+    #   inat = inat |>
+    #     dplyr::filter(iconic_taxon_name != 'Fungi')
+    # }
+    # if('Plantae' %in% exclude){
+    #   inat = inat |>
+    #     dplyr::filter(iconic_taxon_name != 'Plantae')
+    # }
+
+    # Updated this section to loop through the taxa we are searching for,
+    # which really speeds up the query.
     inat = tryCatch(
       expr = suppressWarnings(
-        rinat::get_inat_obs(place_id = '7085',
-                            bounds = bounds_wgs_84$V1,
-                            quality = 'research',
-                            maxresults = 10000) |>
+        # Cycle through taxa to search, binding rows.
+        purrr::map(taxa_to_include, ~ {
+          tryCatch(
+            expr = tidyr::as_tibble(
+              rinat::get_inat_obs(
+                #place_id = '7085',
+                # bounds = bounds_wgs_84$V1,
+                taxon_name = .x,
+                query = paste0(wb$Waterbody),
+                quality = 'research',
+                maxresults = 10000
+              )),
+            error = function(e) NULL
+          )})
+        |>
+          dplyr::bind_rows() |>
           dplyr::summarise(DataSource = 'iNaturalist',
                            Date = stringr::str_extract(observed_on_string, '[0-9]{4}-[0-9]{2}-[0-9]{2}'),
                            Species = common_name,
@@ -218,23 +279,18 @@ find_all_species_in_waterbody = function(wb,
       error = function(e) NULL
     )
 
-    # if('Fungi' %in% exclude){
-    #   inat = inat |>
-    #     dplyr::filter(iconic_taxon_name != 'Fungi')
-    # }
-    # if('Plantae' %in% exclude){
-    #   inat = inat |>
-    #     dplyr::filter(iconic_taxon_name != 'Plantae')
-    # }
-    inat = inat |>
-      dplyr::filter(iconic_taxon_name %in% taxa_to_include) |>
-      dplyr::select(-iconic_taxon_name)
-
     if(quiet == F){
       if(!is.null(inat)){
+        # Filter taxa
+        inat = inat |>
+          dplyr::filter(iconic_taxon_name %in% taxa_to_include) |>
+          dplyr::select(-iconic_taxon_name)
+
+        # Filter for our wb
+        inat = inat |> sf::st_filter(wb)
         cat(paste0(nrow(inat)," records...\n"))
       } else {
-        cat("No records here!\n")
+        cat("No records here! \nNote that this may because there were more than 10,000 records for the waterbody name provided.\nIf you suspect there should be records, \ntry using {rinat} to supplement results from this function.")
       }
     }
 

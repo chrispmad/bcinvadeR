@@ -283,7 +283,7 @@ find_all_species_in_waterbody = function(wb,
       if(!is.null(inat)){
         # Filter taxa
         inat = inat |>
-          dplyr::filter(iconic_taxon_name %in% taxa_to_include) |>
+          dplyr::filter(iconic_taxon_name %in% dplyr::any_of(taxa_to_include)) |>
           dplyr::select(-iconic_taxon_name)
 
         # Filter for our wb

@@ -7,7 +7,7 @@
 #' @param output_crs Coordinate Reference System (i.e. projection system); defaults to 4326 (WGS 84), another common option for BC is 3005.
 #' @param quiet Boolean to determine amount of feedback given by function
 #' @param ... Additional arguments
-#' @param sources Which layers to search for occurrence data; one or more of 'SPI','Old Aquatic','Incident Reports', and 'iNaturalist'
+#' @param sources Which layers to search for occurrence data; one or more of 'FDIS','Old Aquatic','Incident Reports', and 'iNaturalist'
 #' @param in_shiny Is this function being run in shiny? If so, give incremental progress updates.
 #' @param remove_no_coord_rows Should rows from our excel tracking sheet be dropped if they are lacking lat/lon coordinates?
 #'
@@ -22,7 +22,7 @@
 #' invasive_fish = grab_aq_occ_data(common_names = c("black crappie","bullhead",
 #' "black bullhead","brown bullhead","yellow bullhead"))
 grab_aq_occ_data = function(common_names = NULL,
-                            sources = c("SPI","Old Aquatic","Incident Reports","iNaturalist"),
+                            sources = c("FDIS","Old Aquatic","Incident Reports","iNaturalist"),
                             excel_path = '5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
                             excel_species_var = 'Submitted_Common_Name',
@@ -45,14 +45,14 @@ grab_aq_occ_data = function(common_names = NULL,
   search_results = list()
 
   if(quiet == F){
-    cat("Looking for records in the Wildlife Species Inventory Incidental Observations layer on BC Warehouse...\n")
+    cat("Looking for records in the Known BC Fish Observations and BC Fish Distributions layer on BC Warehouse...\n")
   }
 
-  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching SPI dataset')
+  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching FDIS dataset')
 
   common_names_title = common_names
 
-  if('SPI' %in% sources){
+  if('FDIS' %in% sources){
 
     # cql_query = paste0("SPECIES_NAME like ",common_names,"%")
 
@@ -88,7 +88,7 @@ grab_aq_occ_data = function(common_names = NULL,
 
   if('Old Aquatic' %in% sources){
     if(quiet == F){
-      cat("Looking for records in the Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
+      cat("Looking for records in the (deprecated) Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
     }
 
     # Look in the old AIS layer

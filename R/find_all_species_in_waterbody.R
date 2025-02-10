@@ -17,7 +17,7 @@
 #' @examples \dontrun{}
 find_all_species_in_waterbody = function(wb,
                                          in_shiny = F,
-                                         sources = c("SPI","Old Aquatic","Incident Reports","iNaturalist"),
+                                         sources = c("FDIS","Old Aquatic","Incident Reports","iNaturalist"),
                                          taxa_to_include = c('Actinopterygii','Mollusca','Fish'),
                                          excel_path = '5_Incidental Observations/Master Incidence Report Records.xlsx',
                                          sheet_name = 'Aquatic Reports',
@@ -37,12 +37,12 @@ find_all_species_in_waterbody = function(wb,
   search_results = list()
 
   if(quiet == F){
-    cat("Looking for records in the Wildlife Species Inventory Incidental Observations layer on BC Warehouse...\n")
+    cat("Looking for records in the Known BC Fish Observations and BC Fish Distributions layer on BC Warehouse\n")
   }
 
-  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching SPI dataset')
+  if(in_shiny) shiny::incProgress(amount = 1/5, message = 'Searching FDIS dataset')
 
-  if('SPI' %in% sources){
+  if('FDIS' %in% sources){
     ## BCG Warehouse Data
     bcg_records = tryCatch(
       expr = bcdata::bcdc_query_geodata('aca81811-4b08-4382-9af7-204e0b9d2448') |>
@@ -71,7 +71,7 @@ find_all_species_in_waterbody = function(wb,
 
   if('Old Aquatic' %in% sources){
     if(quiet == F){
-      cat("Looking for records in the Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
+      cat("Looking for records in the (deprecated) Aquatic Invasive Species of British Columbia layer on BC Warehouse...\n")
     }
 
     # Look in the old AIS layer
@@ -302,6 +302,10 @@ find_all_species_in_waterbody = function(wb,
 
   dataset = search_results |>
     dplyr::bind_rows()
+
+  # Ensure we have filtered the dataset with the wb polygon.
+  # browser()
+  dataset = sf::st_filter(dataset, sf::st_transform(wb,4326))
 
   if(nrow(dataset) == 0) stop("No records found for this species name")
 

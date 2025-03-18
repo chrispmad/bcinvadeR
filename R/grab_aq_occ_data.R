@@ -1,13 +1,14 @@
 #' Grab Aquatic BC Occurrence Data
 #'
 #' @param common_names A vector of common names for one or more species of interest.
+#' @param sources Which layers to search for occurrence data; one or more of 'FDIS','Old Aquatic','Incident Reports', and 'iNaturalist'
 #' @param excel_path Optional; path to your excel file (must include columns Date, Species, Scientific, Location, Latitude and Longitude)
 #' @param sheet_name Optional; if you read in your own excel file, what is the excel sheet name?
 #' @param excel_species_var Optional; if you read in your own excel file, what is the name of the column listing common names?
+#' @param confirmed_only Should we only pull incident reports that have been confirmed?
 #' @param output_crs Coordinate Reference System (i.e. projection system); defaults to 4326 (WGS 84), another common option for BC is 3005.
 #' @param quiet Boolean to determine amount of feedback given by function
 #' @param ... Additional arguments
-#' @param sources Which layers to search for occurrence data; one or more of 'FDIS','Old Aquatic','Incident Reports', and 'iNaturalist'
 #' @param in_shiny Is this function being run in shiny? If so, give incremental progress updates.
 #' @param remove_no_coord_rows Should rows from our excel tracking sheet be dropped if they are lacking lat/lon coordinates?
 #'
@@ -26,6 +27,7 @@ grab_aq_occ_data = function(common_names = NULL,
                             excel_path = '5_Incidental Observations/Master Incidence Report Records.xlsx',
                             sheet_name = 'Aquatic Reports',
                             excel_species_var = 'Submitted_Common_Name',
+                            confirmed_only = TRUE,
                             output_crs = 4326,
                             quiet = F,
                             in_shiny = F,
@@ -34,6 +36,10 @@ grab_aq_occ_data = function(common_names = NULL,
   # Must specify common name or scientific name, as character string
   if(is.null(common_names)) stop("Enter the species' common name")
   if(!is.character(common_names)) stop("Species name must be a character string")
+
+  # Expand search when necessary to catch alternate common names.
+  og_common_name = common_names
+  if(stringr::str_detect(common_names,'umpkinseed$')) common_names = c(common_names,'Pumpkinseed Sunfish')
 
   # expand common names to all kinds of CaPiTaLiZaTiOn.
   common_names = c(stringr::str_to_lower(common_names),
@@ -146,9 +152,6 @@ grab_aq_occ_data = function(common_names = NULL,
             dplyr::filter(stringr::str_detect(Species,paste0("(",paste0(common_names,collapse = '|'),")"))) |>
             dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude,ID_Confirmation)
 
-          # Remove unconfirmed reports!
-          excel_dat = excel_dat[excel_dat$ID_Confirmation == 'Confirmed',]
-
           initial_nrow_inc = nrow(excel_dat)
 
           # Filter out rows with no lat/long
@@ -157,7 +160,7 @@ grab_aq_occ_data = function(common_names = NULL,
               dplyr::mutate(Latitude = as.numeric(Latitude), Longitude = as.numeric(Longitude)) |>
               dplyr::mutate(Date = as.character(Date)) |>
               dplyr::mutate(stringr::str_extract(Date, '[0-9]{4}-[0-9]{2}-[0-9]{2}')) |>
-              dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude) |>
+              dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude,ID_Confirmation) |>
               dplyr::mutate(DataSource = 'Incidental Observation') |>
               dplyr::select(DataSource, dplyr::everything()) #|>
               # dplyr::filter(!is.na(Latitude),!is.na(Longitude))
@@ -207,6 +210,12 @@ grab_aq_occ_data = function(common_names = NULL,
         },
         error = function(e) NULL
       )
+
+      # Remove unconfirmed reports!
+      if(confirmed_only){
+        cat(paste0("\nRemoving unconfirmed reports (",nrow(excel_dat[excel_dat$ID_Confirmation != 'Confirmed',])," reports)...\n"))
+        excel_dat = excel_dat[excel_dat$ID_Confirmation == 'Confirmed',]
+      }
 
       if(quiet == F){
         if(!is.null(inc)){
@@ -285,7 +294,9 @@ grab_aq_occ_data = function(common_names = NULL,
     cat(paste0(nrow(dataset), " rows after dropping duplicates\n"))
   }
 
-  #if(!quiet) beepr::beep(5)
+  # Ensure we are returning the originally searched common name.
+  dataset = dataset |>
+    dplyr::mutate(Species = stringr::str_to_title(og_common_name))
 
   return(dataset)
 }

@@ -296,7 +296,7 @@ grab_aq_occ_data = function(common_names = NULL,
 
   # Check that we aren't amalgamating species that we shouldn't! E.g. Northern
   # Pike and Northern Pikeminnow.
-  if(og_common_name == 'northern pike') dataset = dataset[dataset$Species != "Northern Pikeminnow",]
+  if(stringr::str_to_lower(og_common_name) == 'northern pike') dataset = dataset[dataset$Species != "Northern Pikeminnow",]
 
   # Ensure we are returning the originally searched common name.
   dataset = dataset |>

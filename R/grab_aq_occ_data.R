@@ -294,6 +294,10 @@ grab_aq_occ_data = function(common_names = NULL,
     cat(paste0(nrow(dataset), " rows after dropping duplicates\n"))
   }
 
+  # Check that we aren't amalgamating species that we shouldn't! E.g. Northern
+  # Pike and Northern Pikeminnow.
+  if(og_common_name == 'northern pike') dataset = dataset[dataset$Species != "Northern Pikeminnow",]
+
   # Ensure we are returning the originally searched common name.
   dataset = dataset |>
     dplyr::mutate(Species = stringr::str_to_title(og_common_name))

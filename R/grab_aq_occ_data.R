@@ -69,6 +69,7 @@ grab_aq_occ_data = function(common_names = NULL,
       expr = bcdata::bcdc_query_geodata('aca81811-4b08-4382-9af7-204e0b9d2448') |>
         # bcdata::filter(SPECIES_NAME %in% common_names) |>
         bcdata::filter(bcdata:::CQL(cql_query)) |>
+        bcdata::filter(POINT_TYPE_CODE == 'Observation') |>
         # bcdata::filter(bcdata:::CQL("SPECIES_NAME LIKE '% shad' OR SPECIES_NAME LIKE '% shad %'")) |>
         bcdata::collect() |>
         sf::st_transform(crs = output_crs) |>

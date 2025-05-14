@@ -214,7 +214,7 @@ grab_aq_occ_data = function(common_names = NULL,
 
       # Remove unconfirmed reports!
       if(confirmed_only){
-        cat(paste0("\nRemoving unconfirmed reports (",nrow(excel_dat[excel_dat$ID_Confirmation != 'Confirmed',])," reports)...\n"))
+        if(quiet == F) cat(paste0("\nRemoving unconfirmed reports (",nrow(excel_dat[excel_dat$ID_Confirmation != 'Confirmed',])," reports)...\n"))
         excel_dat = excel_dat[excel_dat$ID_Confirmation == 'Confirmed',]
       }
 

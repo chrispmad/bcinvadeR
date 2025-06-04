@@ -114,7 +114,7 @@ find_all_species_in_waterbody = function(wb,
 
       if(stringr::str_detect(excel_path,"^5_Incidental Observations/")){
         # This is likely our folder; prepend the full LAN filepath.
-        excel_path = paste0("\\\\SFP.IDIR.BCGOV/S140/S40203/RSD_ FISH & AQUATIC HABITAT BRANCH/General/2 SCIENCE - Invasives/SPECIES/", excel_path)
+        excel_path = paste0("\\\\SFP.IDIR.BCGOV/S140/S40203/WFC AEB/General/2 SCIENCE - Invasives/SPECIES/", excel_path)
       }
 
       tryCatch(

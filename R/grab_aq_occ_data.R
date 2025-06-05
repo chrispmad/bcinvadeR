@@ -149,6 +149,8 @@ grab_aq_occ_data = function(common_names = NULL,
           excel_dat = readxl::read_excel(path = excel_path,
                                          sheet = sheet_name) |>
             dplyr::rename(Species = excel_species_var) |>
+            # Coalesce species name from confirmed name and submitted name.
+            dplyr::mutate(Species = ifelse(!is.na(Confirmed_Common_Name),Confirmed_Common_Name,Species)) |>
             dplyr::mutate(Species = stringr::str_to_title(Species)) |>
             dplyr::filter(stringr::str_detect(Species,paste0("(",paste0(common_names,collapse = '|'),")"))) |>
             dplyr::select(Species,Submitted_Scientific_Name,Date,Location,Latitude,Longitude,ID_Confirmation)

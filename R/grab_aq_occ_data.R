@@ -248,7 +248,7 @@ grab_aq_occ_data = function(common_names = NULL,
                         maxresults = 10000) |>
       dplyr::filter(common_name %in% common_names) |>
       dplyr::summarise(DataSource = 'iNaturalist',
-                    Date = stringr::str_extract(observed_on_string, '[0-9]{4}-[0-9]{2}-[0-9]{2}'),
+                    Date = stringr::str_extract(observed_on, '[0-9]{4}-[0-9]{2}-[0-9]{2}'),
                     Species = common_names[3],
                     iNat_user = user_login,
                     iNat_report_id = id,

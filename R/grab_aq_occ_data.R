@@ -50,6 +50,7 @@ grab_aq_occ_data = function(common_names = NULL,
 
   search_results = list()
 
+
   if(quiet == F){
     cat("Looking for records in the Known BC Fish Observations and BC Fish Distributions layer on BC Warehouse...\n")
   }

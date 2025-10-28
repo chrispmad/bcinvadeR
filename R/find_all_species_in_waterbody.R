@@ -256,7 +256,7 @@ find_all_species_in_waterbody = function(wb,
                 #place_id = '7085',
                 # bounds = bounds_wgs_84$V1,
                 taxon_name = .x,
-                query = paste0(wb$Waterbody),
+                query = paste0(wb$GNIS_NAME_1),
                 quality = 'research',
                 maxresults = 10000
               )),

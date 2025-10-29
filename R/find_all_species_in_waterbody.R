@@ -251,15 +251,13 @@ find_all_species_in_waterbody = function(wb,
         # Cycle through taxa to search, binding rows.
         purrr::map(taxa_to_include, ~ {
           tryCatch(
-            expr = tidyr::as_tibble(
-              rinat::get_inat_obs(
-                #place_id = '7085',
-                # bounds = bounds_wgs_84$V1,
-                taxon_name = .x,
-                query = paste0(wb$GNIS_NAME_1),
-                quality = 'research',
-                maxresults = 10000
-              )),
+            rinat::get_inat_obs(
+  taxon_name = .x,
+  query = paste0(wb$GNIS_NAME_1),
+  quality = 'research',
+  maxresults = 10000,
+  config = httr::user_agent("bc-invasives-dashboard (john.phelan@gov.bc.ca)")  # use a real contact if possible
+)),
             error = function(e) NULL
           )})
         |>

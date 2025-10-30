@@ -197,38 +197,74 @@ find_all_species_in_waterbody = function(wb,
       as.data.frame() |>
       dplyr::slice(2,1,4,3)
 
+    # inat = tryCatch(
+    #   expr = suppressWarnings(
+    #     # Cycle through taxa to search, binding rows.
+    #     rinat_data = purrr::map(taxa_to_include){
+    #       tryCatch(
+    #         expr = rinat::get_inat_obs(
+    #           #place_id = '7085',
+    #           # bounds = bounds_wgs_84$V1,
+    #           query = paste0(wb$Waterbody),
+    #           quality = 'research',
+    #           maxresults = 10000
+    #         ),
+    #         error = function(e) NULL
+    #       )}
+    #      |> dplyr::bind_rows()
+    #     # rinat::get_inat_obs(
+    #     #   #place_id = '7085',
+    #     #   # bounds = bounds_wgs_84$V1,
+    #     #   query = paste0(wb$Waterbody),
+    #     #   quality = 'research',
+    #     #   maxresults = 10000
+    #     # )
+    #     rinat_data |>
+    #       dplyr::summarise(DataSource = 'iNaturalist',
+    #                        Date = stringr::str_extract(observed_on_string, '[0-9]{4}-[0-9]{2}-[0-9]{2}'),
+    #                        Species = common_name,
+    #                        iNat_user = user_login,
+    #                        iNat_report_id = id,
+    #                        Location = place_guess,
+    #                        iconic_taxon_name,
+    #                        latitude,
+    #                        longitude) |>
+    #       sf::st_as_sf(coords = c('longitude','latitude'),
+    #                    crs = 4326)
+    #   ),
+    #   error = function(e) NULL
+    # )
+
+    # if('Fungi' %in% exclude){
+    #   inat = inat |>
+    #     dplyr::filter(iconic_taxon_name != 'Fungi')
+    # }
+    # if('Plantae' %in% exclude){
+    #   inat = inat |>
+    #     dplyr::filter(iconic_taxon_name != 'Plantae')
+    # }
+
     # Updated this section to loop through the taxa we are searching for,
     # which really speeds up the query.
     inat = tryCatch(
-      expr = suppressWarnings({
+      expr = suppressWarnings(
         # Cycle through taxa to search, binding rows.
-        rinat_results_list <- purrr::map(taxa_to_include, ~ {
-          # Each map iteration: try the API call, return tibble or NULL on error
+        purrr::map(taxa_to_include, ~ {
           tryCatch(
-            expr = {
-              # wrap get_inat_obs result as tibble to make binding safe
-              tidyr::as_tibble(
-                rinat::get_inat_obs(
-                  taxon_name = .x,
-                  query = paste0(wb$GNIS_NAME_1),
-                  quality = 'research',
-                  maxresults = 10000,
-                  config = httr::user_agent("bc-invasives-dashboard (john.phelan@gov.bc.ca)")
-                )
-              )
-            },
-            error = function(e) {
-              # return NULL on error so bind_rows ignores it
-              NULL
-            }
-          )
-        })
-
-        # bind rows from all taxa queries (will handle NULLs fine)
-        rinat_data <- dplyr::bind_rows(rinat_results_list)
-
-        # Summarise and convert to sf
-        rinat_data |>
+            expr = tidyr::as_tibble(
+              rinat::get_inat_obs(
+                #place_id = '7085',
+                # bounds = bounds_wgs_84$V1,
+                taxon_name = .x,
+                query = paste0(wb$Waterbody),
+                query = paste0(wb$GNIS_NAME_1),
+                quality = 'research',
+                maxresults = 10000
+              )),
+            error = function(e) NULL
+          )})
+        |>
+          dplyr::bind_rows() |>
           dplyr::summarise(DataSource = 'iNaturalist',
                            Date = stringr::str_extract(observed_on_string, '[0-9]{4}-[0-9]{2}-[0-9]{2}'),
                            Species = common_name,
@@ -238,23 +274,24 @@ find_all_species_in_waterbody = function(wb,
                            iconic_taxon_name,
                            latitude,
                            longitude) |>
-          sf::st_as_sf(coords = c('longitude','latitude'), crs = 4326)
-      }),
+          sf::st_as_sf(coords = c('longitude','latitude'),
+                       crs = 4326)
+      ),
       error = function(e) NULL
     )
 
     if(quiet == F){
       if(!is.null(inat)){
-        # Filter taxa (iconic_taxon_name) if requested
+        # Filter taxa
         inat = inat |>
           dplyr::filter(iconic_taxon_name %in% dplyr::any_of(taxa_to_include)) |>
           dplyr::select(-iconic_taxon_name)
 
-        # Filter for our wb polygon
+        # Filter for our wb
         inat = inat |> sf::st_filter(wb)
         cat(paste0(nrow(inat)," records...\n"))
       } else {
-        cat("No records here! \nNote that this may be because there were more than 10,000 records for the waterbody name provided.\nIf you suspect there should be records, \ntry using {rinat} to supplement results from this function.")
+        cat("No records here! \nNote that this may because there were more than 10,000 records for the waterbody name provided.\nIf you suspect there should be records, \ntry using {rinat} to supplement results from this function.")
       }
     }
 
@@ -268,6 +305,7 @@ find_all_species_in_waterbody = function(wb,
     dplyr::bind_rows()
 
   # Ensure we have filtered the dataset with the wb polygon.
+  # browser()
   dataset = sf::st_filter(dataset, sf::st_transform(wb,4326))
 
   if(nrow(dataset) == 0) stop("No records found for this species name")
